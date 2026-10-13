@@ -22,18 +22,18 @@ public class DataQueries {
     }
 
     public static final RowMapper<UserBalance> USER_BALANCE = resultSet -> {
-        UserBalance balance = new UserBalance();
+        Map<String, Double> balances = new HashMap<>();
 
         DataColumns.currencies().forEach((id, column) -> {
             try {
-                balance.add(id, column.readOrThrow(resultSet));
+                balances.put(id, column.readOrThrow(resultSet));
             }
             catch (SQLException exception) {
                 exception.printStackTrace();
             }
         });
 
-        return balance;
+        return new UserBalance(balances);
     };
 
     public static final RowMapper<CoinsUser> USER_LOADER = resultSet -> {

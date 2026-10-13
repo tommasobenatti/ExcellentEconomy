@@ -34,7 +34,7 @@ public class DataColumns {
         .defaultValue(false)
         .build();
 
-    private static final Map<String, Column<Double>> CURRENCY_MAP = new HashMap<>();
+    private static final Map<String, Column<Double>> CURRENCY_MAP = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Contract(pure = true)
     @NonNull
