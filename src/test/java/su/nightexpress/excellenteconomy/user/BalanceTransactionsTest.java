@@ -60,6 +60,23 @@ class BalanceTransactionsTest {
     }
 
     @Test
+    void cancelledTransferCannotRefundASuccessfulNestedWithdrawal() {
+        CoinsUser sender = TestServer.user("sender", currency, 100);
+        CoinsUser receiver = TestServer.user("receiver", currency, 0);
+        doAnswer(call -> {
+            ChangeBalanceEvent event = call.getArgument(0);
+            if (event.getUser() == receiver) {
+                assertFalse(BalanceTransactions.withdraw(sender, currency, 1));
+                event.setCancelled(true);
+            }
+            return null;
+        }).when(TestServer.PLUGINS).callEvent(any(ChangeBalanceEvent.class));
+        assertFalse(BalanceTransactions.transfer(sender, currency, receiver, currency, 50, 50));
+        assertEquals(100, sender.getBalance(currency));
+        assertEquals(0, receiver.getBalance(currency));
+    }
+
+    @Test
     void receiverLimitAndInsufficientFundsLeaveBalancesUntouched() {
         CoinsUser sender = TestServer.user("sender", currency, 100);
         CoinsUser receiver = TestServer.user("receiver", currency, 80);
