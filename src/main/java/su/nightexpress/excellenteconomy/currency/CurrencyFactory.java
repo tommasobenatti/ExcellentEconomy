@@ -3,7 +3,7 @@ package su.nightexpress.excellenteconomy.currency;
 import org.jspecify.annotations.NonNull;
 import su.nightexpress.excellenteconomy.api.ExcellentEconomyAPI;
 import su.nightexpress.excellenteconomy.currency.impl.AbstractCurrency;
-import su.nightexpress.excellenteconomy.currency.impl.EconomyCurrency;
+import su.nightexpress.excellenteconomy.hook.LegacyVaultHook;
 import su.nightexpress.excellenteconomy.currency.impl.NormalCurrency;
 import su.nightexpress.excellenteconomy.data.DataHandler;
 import su.nightexpress.excellenteconomy.user.UserManager;
@@ -22,7 +22,7 @@ public class CurrencyFactory {
                                                  @NonNull CurrencyManager currencyManager,
                                                  @NonNull DataHandler dataHandler,
                                                  @NonNull UserManager userManager) {
-        return new EconomyCurrency(path, id, plugin, currencyManager, dataHandler, userManager);
+        return LegacyVaultHook.create(path, id, plugin, currencyManager, dataHandler, userManager);
     }
 
     @NonNull

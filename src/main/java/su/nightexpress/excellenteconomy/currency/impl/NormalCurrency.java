@@ -6,8 +6,15 @@ import java.nio.file.Path;
 
 public class NormalCurrency extends AbstractCurrency {
 
+    private final boolean primary;
+
     public NormalCurrency(@NotNull Path path, @NotNull String id) {
+        this(path, id, false);
+    }
+
+    public NormalCurrency(@NotNull Path path, @NotNull String id, boolean primary) {
         super(path, id);
+        this.primary = primary;
     }
 
     @Override
@@ -22,6 +29,6 @@ public class NormalCurrency extends AbstractCurrency {
 
     @Override
     public boolean isPrimary() {
-        return false;
+        return this.primary;
     }
 }

@@ -27,6 +27,7 @@ import su.nightexpress.excellenteconomy.currency.placeholder.PlayerBalancePlaceh
 import su.nightexpress.excellenteconomy.data.DataColumns;
 import su.nightexpress.excellenteconomy.data.DataHandler;
 import su.nightexpress.excellenteconomy.hook.HookPlugin;
+import su.nightexpress.excellenteconomy.hook.VaultHooks;
 import su.nightexpress.excellenteconomy.user.CoinsUser;
 import su.nightexpress.excellenteconomy.user.BalanceTransactions;
 import su.nightexpress.excellenteconomy.user.UserManager;
@@ -215,7 +216,8 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
         String id = Strings.varStyle(name).orElseThrow(() -> new IllegalStateException("Malformed file name '" +
             fileName + "'"));
 
-        boolean isVault = Plugins.isInstalled(HookPlugin.VAULT) && Config.INTEGRATION_VAULT_ENABLED.get();
+        boolean isVault = Config.INTEGRATION_VAULT_ENABLED.get()
+            && VaultHooks.hasAPI("net.milkbowl.vault.economy.Economy");
         boolean isGoodId = Config.INTEGRATION_VAULT_ECONOMY_CURRENCY.get().equalsIgnoreCase(id);
 
         AbstractCurrency currency;
@@ -225,7 +227,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
                 this.userManager);
         }
         else {
-            currency = CurrencyFactory.createNormal(path, id);
+            currency = new NormalCurrency(path, id, isGoodId);
         }
 
         // Useless until we remake the plugin reload system.
