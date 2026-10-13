@@ -17,6 +17,9 @@ public class Lang implements LangContainer {
     public static final MessageLocale CURRENCY_OPERATION_FAILED = LangEntry.builder("Currency.Operation.Failed")
         .chatMessage(SOFT_RED.wrap("Operation rejected: insufficient funds, balance limit, or a cancelled balance change."));
 
+    public static final MessageLocale CURRENCY_SEND_TAX = LangEntry.builder("Currency.Send.Tax")
+        .chatMessage(GRAY.wrap("Transfer tax: " + SOFT_YELLOW.wrap("%tax%") + ". Charged to %payer%."));
+
     public static final TextLocale COMMAND_ARGUMENT_NAME_CURRENCY = LangEntry.builder("Command.Argument.Name.Currency")
         .text("currency");
     public static final TextLocale COMMAND_ARGUMENT_NAME_PAGE     = LangEntry.builder("Command.Argument.Name.Page")

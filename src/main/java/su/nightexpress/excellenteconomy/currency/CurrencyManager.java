@@ -18,6 +18,8 @@ import su.nightexpress.excellenteconomy.command.CommandManager;
 import su.nightexpress.excellenteconomy.command.currency.CommandDefinition;
 import su.nightexpress.excellenteconomy.config.Config;
 import su.nightexpress.excellenteconomy.config.Lang;
+import su.nightexpress.excellenteconomy.config.Perms;
+import su.nightexpress.excellenteconomy.currency.tax.TransferTax;
 import su.nightexpress.excellenteconomy.currency.command.*;
 import su.nightexpress.excellenteconomy.currency.impl.AbstractCurrency;
 import su.nightexpress.excellenteconomy.currency.impl.NormalCurrency;
@@ -281,6 +283,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
             return false;
         }
 
+        Perms.registerChild(Perms.taxBypass(currency), Perms.TAX_BYPASS);
         currency.onRegister();
         this.registry.add(currency);
         this.dataHandler.onCurrencyRegister(currency);
@@ -707,8 +710,17 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
             return false;
         }
 
+        TransferTax.Quote quote;
+        try {
+            TransferTax tax = sender.hasPermission(Perms.taxBypass(currency)) ? TransferTax.NONE : currency.getTransferTax();
+            quote = tax.quote(amount, currency.isDecimal(), sender::hasPermission);
+        }
+        catch (IllegalArgumentException exception) {
+            currency.sendPrefixed(Lang.CURRENCY_OPERATION_FAILED, sender);
+            return false;
+        }
         CoinsUser fromUser = this.userManager.getOrFetch(sender);
-        if (amount > fromUser.getBalance(currency)) {
+        if (quote.debit() > fromUser.getBalance(currency)) {
             currency.sendPrefixed(Lang.CURRENCY_SEND_ERROR_NOT_ENOUGH, sender);
             return false;
         }
@@ -721,7 +733,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
             return false;
         }
 
-        if (!BalanceTransactions.transfer(fromUser, currency, targetUser, currency, amount, amount)) {
+        if (!BalanceTransactions.transfer(fromUser, currency, targetUser, currency, quote.debit(), quote.credit())) {
             currency.sendPrefixed(Lang.CURRENCY_OPERATION_FAILED, sender);
             return false;
         }
@@ -734,20 +746,29 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
             .with(CommonPlaceholders.PLAYER_NAME, targetUser::getName)
         );
 
+        if (quote.tax() > 0) {
+            currency.sendPrefixed(Lang.CURRENCY_SEND_TAX, sender, builder -> builder
+                .with("%tax%", () -> currency.format(quote.tax()))
+                .with("%payer%", () -> currency.getTransferTax().payer().name().toLowerCase(java.util.Locale.ROOT)));
+        }
+
         targetUser.player().ifPresent(target -> {
             currency.sendPrefixed(Lang.CURRENCY_SEND_NOTIFY, target, builder -> builder
-                .with(EconomyPlaceholders.GENERIC_AMOUNT, () -> currency.format(amount))
+                .with(EconomyPlaceholders.GENERIC_AMOUNT, () -> currency.format(quote.credit()))
                 .with(EconomyPlaceholders.GENERIC_BALANCE, () -> currency.format(targetUser.getBalance(currency)))
                 .with(CommonPlaceholders.PLAYER.resolver(sender))
             );
         });
 
         if (this.logger != null) {
-            this.logger.addEntry(context, "[%s] %s paid %s to %s. New balances: %s and %s.".formatted(
+            this.logger.addEntry(context, "[%s] %s paid %s to %s (tax: %s, debited: %s, received: %s). New balances: %s and %s.".formatted(
                 currency.getId(),
                 sender.getName(),
                 currency.format(amount),
                 targetUser.getName(),
+                currency.format(quote.tax()),
+                currency.format(quote.debit()),
+                currency.format(quote.credit()),
                 currency.format(fromUser.getBalance(currency)),
                 currency.format(targetUser.getBalance(currency))
             ));

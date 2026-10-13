@@ -9,6 +9,7 @@ import su.nightexpress.excellenteconomy.EconomyPlaceholders;
 import su.nightexpress.excellenteconomy.api.currency.ExcellentCurrency;
 import su.nightexpress.excellenteconomy.config.Config;
 import su.nightexpress.excellenteconomy.config.Perms;
+import su.nightexpress.excellenteconomy.currency.tax.TransferTax;
 import su.nightexpress.nightcore.config.ConfigValue;
 import su.nightexpress.nightcore.config.FileConfig;
 import su.nightexpress.nightcore.integration.placeholder.PAPI;
@@ -68,6 +69,7 @@ public abstract class AbstractCurrency implements ExcellentCurrency, ConfigBacke
 
     protected String messagePrefix;
     private final Set<String> disabledCommands = new HashSet<>();
+    private TransferTax transferTax = TransferTax.NONE;
 
     protected AbstractCurrency(@NonNull Path path, @NonNull String id) {
         this.path = path;
@@ -185,6 +187,8 @@ public abstract class AbstractCurrency implements ExcellentCurrency, ConfigBacke
             "[*] Set to '-1' for no limit."
         ).read(config));
 
+        this.transferTax = TransferTax.read(config);
+
         this.setStartValue(ConfigValue.create("Start_Value",
             0D,
             "Start currency value for new players."
@@ -290,6 +294,11 @@ public abstract class AbstractCurrency implements ExcellentCurrency, ConfigBacke
     @Override
     public boolean isCommandEnabled(@NonNull String commandId) {
         return !this.disabledCommands.contains(commandId);
+    }
+
+    @Override
+    public TransferTax getTransferTax() {
+        return this.transferTax;
     }
 
     @Override

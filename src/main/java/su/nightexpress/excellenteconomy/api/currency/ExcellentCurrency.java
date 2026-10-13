@@ -3,6 +3,7 @@ package su.nightexpress.excellenteconomy.api.currency;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jspecify.annotations.NonNull;
+import su.nightexpress.excellenteconomy.currency.tax.TransferTax;
 import su.nightexpress.nightcore.locale.entry.MessageLocale;
 import su.nightexpress.nightcore.util.bukkit.NightItem;
 import su.nightexpress.nightcore.util.number.CompactNumber;
@@ -28,6 +29,10 @@ public interface ExcellentCurrency extends PlaceholderResolvable {
 
     default boolean isCommandEnabled(@NonNull String commandId) {
         return true;
+    }
+
+    default TransferTax getTransferTax() {
+        return TransferTax.NONE;
     }
 
     boolean isPrimary();

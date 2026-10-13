@@ -36,6 +36,12 @@ public class Perms {
     public static final UniPermission HIDE_FROM_TOPS = new UniPermission(PREFIX +
         "hidefromtops", PermissionDefault.FALSE);
 
+    public static final UniPermission TAX_BYPASS = new UniPermission(PREFIX + "tax.bypass", PermissionDefault.FALSE);
+
+    public static String taxBypass(ExcellentCurrency currency) {
+        return PREFIX + "tax." + currency.getId() + ".bypass";
+    }
+
     public static final UniPermission COMMAND_CURRENCY_BALANCE         = new UniPermission(PREFIX_COMMAND +
         "currency.balance");
     public static final UniPermission COMMAND_CURRENCY_BALANCE_OTHERS  = new UniPermission(PREFIX_COMMAND +
