@@ -41,7 +41,7 @@ public class WalletCommand {
 
                 String name = arguments.getString(CommandArguments.PLAYER);
 
-                userManager.loadByNameAsync(name).thenAccept(opt -> {
+                userManager.withUser(context.getSender(), name, opt -> {
                     CoinsUser user = opt.orElse(null);
                     if (user == null) {
                         CoreLang.ERROR_INVALID_PLAYER.withPrefix(plugin).send(sender);

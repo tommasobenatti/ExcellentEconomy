@@ -100,7 +100,7 @@ public class TopManager extends AbstractManager<EconomyPlugin> {
         Set<CoinsUser> users = this.userManager.getAll();
 
         users.removeIf(user -> {
-            user.player().ifPresent(this::hideOrShowInTops);
+            user.player().ifPresent(player -> this.plugin.runTask(player, () -> this.hideOrShowInTops(player)));
             return user.isHiddenFromTops();
         });
 
@@ -143,6 +143,10 @@ public class TopManager extends AbstractManager<EconomyPlugin> {
     }
 
     public void showLeaderboard(@NonNull CommandSender sender, @NonNull ExcellentCurrency currency, int page) {
+        this.plugin.runForSender(sender, () -> this.displayLeaderboard(sender, currency, page));
+    }
+
+    private void displayLeaderboard(CommandSender sender, ExcellentCurrency currency, int page) {
         if (sender instanceof Player player && this.topMenu != null) {
             this.topMenu.show(player, currency);
             return;

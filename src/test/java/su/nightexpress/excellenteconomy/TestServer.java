@@ -43,6 +43,8 @@ public final class TestServer {
 
     private TestServer() {}
 
+    public static void initialize() {}
+
     public static ExcellentCurrency currency(String id) {
         ExcellentCurrency currency = mock(ExcellentCurrency.class);
         when(currency.getId()).thenReturn(id);

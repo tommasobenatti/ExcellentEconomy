@@ -16,6 +16,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import org.bukkit.command.CommandSender;
+import java.util.function.Consumer;
+import su.nightexpress.excellenteconomy.config.Lang;
 
 public class UserManager extends AbstractUserManager<EconomyPlugin, CoinsUser> {
 
@@ -65,6 +68,15 @@ public class UserManager extends AbstractUserManager<EconomyPlugin, CoinsUser> {
 
     public CompletableFuture<Optional<CoinsUser>> findByNameAsync(String name) {
         return CompletableFuture.supplyAsync(() -> this.findByName(name));
+    }
+
+    public void withUser(CommandSender sender, String name, Consumer<Optional<CoinsUser>> action) {
+        this.findByNameAsync(name).thenAccept(user -> this.plugin.runForSender(sender, () -> action.accept(user)))
+            .exceptionally(exception -> {
+                this.plugin.error("Could not load economy account '" + name + "': " + exception.getMessage());
+                this.plugin.runForSender(sender, () -> Lang.USER_LOOKUP_FAILED.message().send(sender));
+                return null;
+            });
     }
 
     public boolean createAccount(UUID uuid, String name) {
@@ -122,11 +134,13 @@ public class UserManager extends AbstractUserManager<EconomyPlugin, CoinsUser> {
 
     @Override
     protected void synchronize(@NonNull CoinsUser fetched, @NonNull CoinsUser cached) {
-        for (ExcellentCurrency currency : this.registry.getCurrencies()) {
-            if (!currency.isSynchronizable()) continue;
-
-            double balance = fetched.getBalance(currency);
-            cached.getBalance().set(currency, balance); // Bypass balance event call.
+        synchronized (UserBalance.class) {
+            if (cached.isDirty()) return;
+            for (ExcellentCurrency currency : this.registry.getCurrencies()) {
+                if (!currency.isSynchronizable()) continue;
+                double balance = fetched.getBalance(currency);
+                cached.getBalance().set(currency, balance); // Bypass balance event call.
+            }
         }
     }
 }

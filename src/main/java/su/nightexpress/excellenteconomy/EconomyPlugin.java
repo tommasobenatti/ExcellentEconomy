@@ -1,6 +1,8 @@
 package su.nightexpress.excellenteconomy;
 
 import org.bukkit.plugin.ServicePriority;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -17,6 +19,8 @@ import su.nightexpress.excellenteconomy.tops.TopManager;
 import su.nightexpress.excellenteconomy.user.UserManager;
 import su.nightexpress.excellenteconomy.hook.VaultHooks;
 import su.nightexpress.excellenteconomy.hook.VaultUnlockedHook;
+import org.bukkit.Bukkit;
+import su.nightexpress.nightcore.util.Version;
 import su.nightexpress.nightcore.NightPlugin;
 import su.nightexpress.nightcore.bridge.placeholder.PlaceholderProvider;
 import su.nightexpress.nightcore.bridge.placeholder.PlaceholderRegistry;
@@ -153,5 +157,14 @@ public class EconomyPlugin extends NightPlugin {
     @NonNull
     public ExcellentEconomyProvider getAPI() {
         return this.api;
+    }
+
+    public void runForSender(CommandSender sender, Runnable runnable) {
+        if (sender instanceof Player player) {
+            if (Version.isFolia() ? Bukkit.isOwnedByCurrentRegion(player) : Bukkit.isPrimaryThread()) runnable.run();
+            else this.runTask(player, runnable);
+        }
+        else if (Bukkit.isPrimaryThread()) runnable.run();
+        else this.runTask(runnable);
     }
 }

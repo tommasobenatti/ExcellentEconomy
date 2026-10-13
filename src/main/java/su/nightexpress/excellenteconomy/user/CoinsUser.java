@@ -19,8 +19,8 @@ public class CoinsUser extends UserTemplate {
     private final UserBalance                   balance;
     private final Map<String, CurrencySettings> settingsMap;
 
-    private long    lastSeen;
-    private boolean hiddenFromTops;
+    private volatile long    lastSeen;
+    private volatile boolean hiddenFromTops;
 
     public CoinsUser(@NonNull UUID uuid,
                      @NonNull String name,
@@ -30,10 +30,25 @@ public class CoinsUser extends UserTemplate {
                      boolean hiddenFromTops) {
         super(uuid, name);
         this.balance = balance;
-        this.settingsMap = new HashMap<>(settingsMap);
+        this.settingsMap = new java.util.concurrent.ConcurrentHashMap<>(settingsMap);
 
         this.setLastSeen(lastSeen);
         this.setHiddenFromTops(hiddenFromTops);
+    }
+
+    @Override
+    public void markDirty() {
+        synchronized (UserBalance.class) { super.markDirty(); }
+    }
+
+    @Override
+    public void markClean() {
+        synchronized (UserBalance.class) { super.markClean(); }
+    }
+
+    @Override
+    public boolean isDirty() {
+        synchronized (UserBalance.class) { return super.isDirty(); }
     }
 
     @NonNull
@@ -61,6 +76,7 @@ public class CoinsUser extends UserTemplate {
                 ChangeBalanceEvent event = new ChangeBalanceEvent(this, currency, oldBalance, this.getBalance(currency));
                 Bukkit.getPluginManager().callEvent(event);
                 success = !event.isCancelled();
+                if (success) this.markDirty();
                 return success;
             }
             finally {

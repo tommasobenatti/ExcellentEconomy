@@ -74,7 +74,7 @@ public abstract class AbstractCurrency implements ExcellentCurrency, ConfigBacke
     protected AbstractCurrency(@NonNull Path path, @NonNull String id) {
         this.path = path;
         this.id = id;
-        this.exchangeRates = new HashMap<>();
+        this.exchangeRates = new java.util.concurrent.ConcurrentHashMap<>();
 
         this.setName(StringUtil.capitalizeUnderscored(id));
         this.setSymbol("");
@@ -369,7 +369,9 @@ public abstract class AbstractCurrency implements ExcellentCurrency, ConfigBacke
     @Override
     @NonNull
     public String formatRaw(double balance) {
-        return RAW_FORMAT.format(this.floorIfNeeded(balance));
+        synchronized (RAW_FORMAT) {
+            return RAW_FORMAT.format(this.floorIfNeeded(balance));
+        }
     }
 
     @NonNull

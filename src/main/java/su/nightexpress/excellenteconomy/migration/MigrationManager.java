@@ -99,14 +99,21 @@ public class MigrationManager extends SimpleManager<EconomyPlugin> {
             return false;
         }
 
+        if (!this.currencyManager.beginMaintenance()) {
+            Lang.MIGRATION_START_BLOCKED.message().send(sender);
+            return false;
+        }
         this.plugin.runTaskAsync(() -> {
-            this.currencyManager.disableOperations();
-            Lang.MIGRATION_STARTED.message().sendWith(sender, builder -> builder.with(EconomyPlaceholders.GENERIC_NAME,
-                migrator::getName));
-            this.migrate(migrator, currency);
-            Lang.MIGRATION_COMPLETED.message().sendWith(sender, builder -> builder.with(
-                EconomyPlaceholders.GENERIC_NAME, migrator::getName));
-            this.currencyManager.allowOperations();
+            this.plugin.runForSender(sender, () -> Lang.MIGRATION_STARTED.message().sendWith(sender, builder -> builder.with(EconomyPlaceholders.GENERIC_NAME,
+                migrator::getName)));
+            try {
+                this.migrate(migrator, currency);
+            }
+            finally {
+                this.currencyManager.allowOperations();
+            }
+            this.plugin.runForSender(sender, () -> Lang.MIGRATION_COMPLETED.message().sendWith(sender, builder -> builder.with(
+                EconomyPlaceholders.GENERIC_NAME, migrator::getName)));
         });
 
         return true;

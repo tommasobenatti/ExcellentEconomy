@@ -60,7 +60,7 @@ public class PaymentsCommand implements CurrencyCommand {
         String name = arguments.getString(CommandArguments.PLAYER);
         boolean silent = context.hasFlag(CommandArguments.FLAG_SILENT);
 
-        this.userManager.loadByNameAsync(name).thenAccept(opt -> {
+        this.userManager.withUser(context.getSender(), name, opt -> {
             CoinsUser user = opt.orElse(null);
             if (user == null) {
                 currency.sendPrefixed(CoreLang.ERROR_INVALID_PLAYER, context.getSender());

@@ -59,7 +59,7 @@ public class BalanceCommand implements CurrencyCommand {
 
         String name = arguments.getString(CommandArguments.PLAYER);
 
-        this.userManager.loadByNameAsync(name).thenAccept(opt -> {
+        this.userManager.withUser(context.getSender(), name, opt -> {
             CoinsUser user = opt.orElse(null);
             if (user == null) {
                 currency.sendPrefixed(CoreLang.ERROR_INVALID_PLAYER, sender);

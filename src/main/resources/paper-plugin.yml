@@ -2,7 +2,8 @@ main: su.nightexpress.excellenteconomy.EconomyPlugin
 version: '${version}'
 name: ExcellentEconomy
 author: NightExpress
-desciption: A modern, lightweight economy plugin that lets you create unlimited custom currencies. 
+description: A modern, lightweight economy plugin that lets you create unlimited custom currencies.
+folia-supported: true
 load: STARTUP
 api-version: 1.21
 dependencies:
@@ -11,7 +12,13 @@ dependencies:
       load: BEFORE
       required: true
     Vault:
+      load: BEFORE
       required: false
+      join-classpath: true
+    VaultUnlocked:
+      load: BEFORE
+      required: false
+      join-classpath: true
     PlaceholderAPI:
       required: false
     PlayerPoints:

@@ -50,7 +50,7 @@ public class GiveCommand implements CurrencyCommand {
         double amount = arguments.getDouble(CommandArguments.AMOUNT);
         String playerName = arguments.getString(CommandArguments.PLAYER);
 
-        this.userManager.loadByNameAsync(playerName).thenAccept(opt -> {
+        this.userManager.withUser(context.getSender(), playerName, opt -> {
             CoinsUser user = opt.orElse(null);
             if (user == null) {
                 currency.sendPrefixed(CoreLang.ERROR_INVALID_PLAYER, context.getSender());

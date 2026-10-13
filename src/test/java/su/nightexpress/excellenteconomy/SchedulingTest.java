@@ -10,6 +10,7 @@ class SchedulingTest {
 
     @Test
     void playerCallbacksUseTheEntitySchedulerAndConsoleUsesTheGlobalScheduler() {
+        TestServer.initialize();
         EconomyPlugin plugin = mock(EconomyPlugin.class, CALLS_REAL_METHODS);
         Player player = mock(Player.class);
         CommandSender console = mock(CommandSender.class);
