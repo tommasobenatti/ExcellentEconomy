@@ -16,6 +16,8 @@ import su.nightexpress.nightcore.user.UserTemplate;
 
 public class CoinsUser extends UserTemplate {
 
+    private static boolean notifyingBalanceChange;
+
     private final UserBalance                   balance;
     private final Map<String, CurrencySettings> settingsMap;
 
@@ -69,12 +71,19 @@ public class CoinsUser extends UserTemplate {
 
     public boolean tryEditBalance(@NonNull ExcellentCurrency currency, @NonNull Consumer<UserBalance> consumer) {
         synchronized (UserBalance.class) {
+            if (notifyingBalanceChange) return false;
             double oldBalance = this.getBalance(currency);
             boolean success = false;
             try {
                 consumer.accept(this.balance);
                 ChangeBalanceEvent event = new ChangeBalanceEvent(this, currency, oldBalance, this.getBalance(currency));
-                Bukkit.getPluginManager().callEvent(event);
+                notifyingBalanceChange = true;
+                try {
+                    Bukkit.getPluginManager().callEvent(event);
+                }
+                finally {
+                    notifyingBalanceChange = false;
+                }
                 success = !event.isCancelled();
                 if (success) this.markDirty();
                 return success;
