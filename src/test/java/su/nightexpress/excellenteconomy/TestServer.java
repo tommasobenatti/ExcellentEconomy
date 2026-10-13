@@ -3,6 +3,7 @@ package su.nightexpress.excellenteconomy;
 import org.bukkit.Bukkit;
 import org.bukkit.Server;
 import org.bukkit.plugin.PluginManager;
+import org.mockito.MockedStatic;
 import su.nightexpress.excellenteconomy.api.currency.ExcellentCurrency;
 import su.nightexpress.excellenteconomy.user.CoinsUser;
 import su.nightexpress.excellenteconomy.user.UserBalance;
@@ -25,7 +26,10 @@ public final class TestServer {
         when(server.getVersion()).thenReturn("26.1.2");
         when(server.getBukkitVersion()).thenReturn("26.1.2");
         when(server.getPluginManager()).thenReturn(PLUGINS);
-        Bukkit.setServer(server);
+        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class, CALLS_REAL_METHODS)) {
+            bukkit.when(Bukkit::getVersionMessage).thenReturn("TestServer");
+            Bukkit.setServer(server);
+        }
     }
 
     private TestServer() {}

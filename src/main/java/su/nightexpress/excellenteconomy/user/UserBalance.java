@@ -26,11 +26,15 @@ public class UserBalance {
      */
     @NonNull
     public Map<String, Double> getBalanceMap() {
-        return Map.copyOf(this.balanceMap);
+        synchronized (UserBalance.class) {
+            return Map.copyOf(this.balanceMap);
+        }
     }
 
     public void clear() {
-        this.balanceMap.clear();
+        synchronized (UserBalance.class) {
+            this.balanceMap.clear();
+        }
     }
 
     public void clear(@NonNull ExcellentCurrency currency) {
@@ -38,7 +42,9 @@ public class UserBalance {
     }
 
     public void clear(@NonNull String currencyId) {
-        this.balanceMap.remove(currencyId);
+        synchronized (UserBalance.class) {
+            this.balanceMap.remove(currencyId);
+        }
     }
 
     public boolean has(@NonNull ExcellentCurrency currency, double amount) {
@@ -50,7 +56,9 @@ public class UserBalance {
     }
 
     public double get(@NonNull String currencyId) {
-        return Math.max(0, this.balanceMap.getOrDefault(currencyId, 0D));
+        synchronized (UserBalance.class) {
+            return Math.max(0, this.balanceMap.getOrDefault(currencyId, 0D));
+        }
     }
 
     public void add(@NonNull ExcellentCurrency currency, double amount) {
@@ -58,7 +66,10 @@ public class UserBalance {
     }
 
     public void add(@NonNull String currencyId, double amount) {
-        this.balanceMap.compute(currencyId, (k, v) -> Math.max(0, (v == null ? 0D : v) + Math.abs(amount)));
+        requireFinite(amount);
+        synchronized (UserBalance.class) {
+            this.balanceMap.compute(currencyId, (k, v) -> Math.max(0, (v == null ? 0D : v) + Math.abs(amount)));
+        }
     }
 
     public void remove(@NonNull ExcellentCurrency currency, double amount) {
@@ -66,7 +77,10 @@ public class UserBalance {
     }
 
     public void remove(@NonNull String currencyId, double amount) {
-        this.balanceMap.compute(currencyId, (k, v) -> Math.max(0, (v == null ? 0D : v) - Math.abs(amount)));
+        requireFinite(amount);
+        synchronized (UserBalance.class) {
+            this.balanceMap.compute(currencyId, (k, v) -> Math.max(0, (v == null ? 0D : v) - Math.abs(amount)));
+        }
     }
 
     public void set(@NonNull ExcellentCurrency currency, double amount) {
@@ -74,6 +88,13 @@ public class UserBalance {
     }
 
     public void set(@NonNull String currencyId, double amount) {
-        this.balanceMap.put(currencyId, Math.max(0, amount));
+        requireFinite(amount);
+        synchronized (UserBalance.class) {
+            this.balanceMap.put(currencyId, Math.max(0, amount));
+        }
+    }
+
+    private static void requireFinite(double amount) {
+        if (!Double.isFinite(amount)) throw new IllegalArgumentException("Balance amount must be finite");
     }
 }

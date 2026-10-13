@@ -26,6 +26,7 @@ import su.nightexpress.excellenteconomy.data.DataColumns;
 import su.nightexpress.excellenteconomy.data.DataHandler;
 import su.nightexpress.excellenteconomy.hook.HookPlugin;
 import su.nightexpress.excellenteconomy.user.CoinsUser;
+import su.nightexpress.excellenteconomy.user.BalanceTransactions;
 import su.nightexpress.excellenteconomy.user.UserManager;
 import su.nightexpress.excellenteconomy.user.data.CurrencySettings;
 import su.nightexpress.nightcore.config.FileConfig;
@@ -479,7 +480,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
 
         OperationExecutor executor = context.getExecutor();
 
-        user.addBalance(currency, amount);
+        if (!BalanceTransactions.deposit(user, currency, amount)) return OperationResult.FAILURE;
         user.markDirty();
 
         if (this.logger != null && context.shouldNotifyLogger()) {
@@ -524,7 +525,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
             Player target = user.player().orElse(null);
             if (target == null) return; // Only online players should be affected.
 
-            user.addBalance(currency, amount);
+            if (!BalanceTransactions.deposit(user, currency, amount)) return;
             user.markDirty();
 
             if (context.shouldNotify(NotificationTarget.USER)) {
@@ -565,7 +566,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
 
         OperationExecutor executor = context.getExecutor();
 
-        user.removeBalance(currency, amount);
+        if (!BalanceTransactions.withdraw(user, currency, amount)) return OperationResult.FAILURE;
         user.markDirty();
 
         if (this.logger != null && context.shouldNotifyLogger()) {
@@ -609,7 +610,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
 
         OperationExecutor executor = context.getExecutor();
 
-        user.setBalance(currency, amount);
+        if (!BalanceTransactions.set(user, currency, amount)) return OperationResult.FAILURE;
         user.markDirty();
 
         if (this.logger != null && context.shouldNotifyLogger()) {
@@ -654,7 +655,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
 
         OperationExecutor executor = context.getExecutor();
 
-        user.resetBalance(currency);
+        if (!BalanceTransactions.set(user, currency, currency.getStartValue())) return OperationResult.FAILURE;
         user.markDirty();
 
         if (this.logger != null && context.shouldNotifyLogger()) {
@@ -696,7 +697,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
         }
 
         double amount = currency.floorIfNeeded(rawAmount);
-        if (amount <= 0D) return false;
+        if (!Double.isFinite(amount) || amount <= 0D) return false;
 
         double minAmount = currency.getMinTransferAmount();
         if (minAmount > 0 && amount < minAmount) {
@@ -720,9 +721,11 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
             return false;
         }
 
-        targetUser.addBalance(currency, amount);
+        if (!BalanceTransactions.transfer(fromUser, currency, targetUser, currency, amount, amount)) {
+            currency.sendPrefixed(Lang.CURRENCY_OPERATION_FAILED, sender);
+            return false;
+        }
         targetUser.markDirty();
-        fromUser.removeBalance(currency, amount);
         fromUser.markDirty();
 
         currency.sendPrefixed(Lang.CURRENCY_SEND_DONE_SENDER, sender, builder -> builder
@@ -765,7 +768,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
         }
 
         double amount = sourceCurrency.floorIfNeeded(initAmount);
-        if (amount <= 0D) {
+        if (!Double.isFinite(amount) || amount <= 0D) {
             sourceCurrency.sendPrefixed(Lang.CURRENCY_EXCHANGE_ERROR_LOW_AMOUNT, player);
             return false;
         }
@@ -786,7 +789,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
         }
 
         double result = sourceCurrency.getExchangeResult(targetCurrency, amount);
-        if (result <= 0D) {
+        if (!Double.isFinite(result) || result <= 0D) {
             sourceCurrency.sendPrefixed(Lang.CURRENCY_EXCHANGE_ERROR_LOW_AMOUNT, player);
             return false;
         }
@@ -800,8 +803,10 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
             return false;
         }
 
-        user.removeBalance(sourceCurrency, amount);
-        user.addBalance(targetCurrency, result);
+        if (!BalanceTransactions.transfer(user, sourceCurrency, user, targetCurrency, amount, result)) {
+            sourceCurrency.sendPrefixed(Lang.CURRENCY_OPERATION_FAILED, player);
+            return false;
+        }
         user.markDirty();
 
         sourceCurrency.sendPrefixed(Lang.CURRENCY_EXCHANGE_SUCCESS, player, builder -> builder

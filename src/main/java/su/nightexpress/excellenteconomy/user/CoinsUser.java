@@ -49,15 +49,23 @@ public class CoinsUser extends UserTemplate {
      * @param consumer balance function.
      */
     public void editBalance(@NonNull ExcellentCurrency currency, @NonNull Consumer<UserBalance> consumer) {
-        double oldBalance = this.getBalance(currency);
+        this.tryEditBalance(currency, consumer);
+    }
 
-        consumer.accept(this.balance);
-
-        ChangeBalanceEvent event = new ChangeBalanceEvent(this, currency, oldBalance, this.getBalance(currency));
-        Bukkit.getPluginManager().callEvent(event);
-
-        if (event.isCancelled()) {
-            this.balance.set(currency, oldBalance);
+    public boolean tryEditBalance(@NonNull ExcellentCurrency currency, @NonNull Consumer<UserBalance> consumer) {
+        synchronized (UserBalance.class) {
+            double oldBalance = this.getBalance(currency);
+            boolean success = false;
+            try {
+                consumer.accept(this.balance);
+                ChangeBalanceEvent event = new ChangeBalanceEvent(this, currency, oldBalance, this.getBalance(currency));
+                Bukkit.getPluginManager().callEvent(event);
+                success = !event.isCancelled();
+                return success;
+            }
+            finally {
+                if (!success) this.balance.set(currency.getId(), oldBalance);
+            }
         }
     }
 
