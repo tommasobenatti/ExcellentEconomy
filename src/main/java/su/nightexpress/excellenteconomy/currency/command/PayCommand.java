@@ -35,7 +35,7 @@ public class PayCommand implements CurrencyCommand {
     public void build(@NonNull LiteralNodeBuilder builder, @NonNull ExcellentCurrency currency) {
         builder
             .playerOnly()
-            .permission(Perms.COMMAND_CURRENCY_SEND)
+            .permission(Perms.currencyCommand(currency, Perms.COMMAND_CURRENCY_SEND))
             .description(Lang.COMMAND_CURRENCY_SEND_DESC)
             .withArguments(
                 Arguments.playerName(CommandArguments.PLAYER),

@@ -32,7 +32,7 @@ public class ExchangeCommand implements CurrencyCommand {
     public void build(@NonNull LiteralNodeBuilder builder, @NonNull ExcellentCurrency currency) {
         builder
             .playerOnly()
-            .permission(Perms.COMMAND_CURRENCY_EXCHANGE)
+            .permission(Perms.currencyCommand(currency, Perms.COMMAND_CURRENCY_EXCHANGE))
             .description(Lang.COMMAND_CURRENCY_EXCHANGE_DESC)
             .withArguments(
                 CommandArguments.currency(this.registry, currency::canExchangeTo),

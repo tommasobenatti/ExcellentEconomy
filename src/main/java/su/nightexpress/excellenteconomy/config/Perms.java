@@ -1,10 +1,29 @@
 package su.nightexpress.excellenteconomy.config;
 
 import org.bukkit.permissions.PermissionDefault;
+import org.bukkit.Bukkit;
+import org.bukkit.permissions.Permission;
+import su.nightexpress.excellenteconomy.api.currency.ExcellentCurrency;
 import su.nightexpress.nightcore.util.Placeholders;
 import su.nightexpress.nightcore.util.wrapper.UniPermission;
 
 public class Perms {
+
+    public static String currencyCommand(ExcellentCurrency currency, Permission global) {
+        String action = global.getName().substring(PREFIX_COMMAND.length()).replaceFirst("^currency\\.", "");
+        String node = PREFIX_COMMAND + currency.getId() + "." + action;
+        registerChild(node, global);
+        return node;
+    }
+
+    public static void registerChild(String name, Permission parent) {
+        Permission permission = Bukkit.getPluginManager().getPermission(name);
+        if (permission == null) {
+            permission = new Permission(name, PermissionDefault.FALSE);
+            Bukkit.getPluginManager().addPermission(permission);
+        }
+        permission.addParent(parent, true);
+    }
 
     public static final String PREFIX          = "excellenteconomy.";
     public static final String PREFIX_COMMAND  = PREFIX + "command.";

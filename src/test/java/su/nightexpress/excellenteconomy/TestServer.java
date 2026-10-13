@@ -37,7 +37,10 @@ public final class TestServer {
     public static ExcellentCurrency currency(String id) {
         ExcellentCurrency currency = mock(ExcellentCurrency.class);
         when(currency.getId()).thenReturn(id);
+        when(currency.getPermission()).thenReturn("excellenteconomy.currency." + id);
+        when(currency.hasPermission(any(org.bukkit.entity.Player.class))).thenReturn(true);
         when(currency.placeholders()).thenReturn(placeholder -> null);
+        when(currency.isCommandEnabled(anyString())).thenReturn(true);
         when(currency.isDecimal()).thenReturn(true);
         when(currency.isTransferAllowed()).thenReturn(true);
         when(currency.isUnlimited()).thenReturn(true);

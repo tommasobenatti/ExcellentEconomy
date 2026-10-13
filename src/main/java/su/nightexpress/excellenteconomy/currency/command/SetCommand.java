@@ -34,7 +34,7 @@ public class SetCommand implements CurrencyCommand {
     @Override
     public void build(@NonNull LiteralNodeBuilder builder, @NonNull ExcellentCurrency currency) {
         builder
-            .permission(Perms.COMMAND_CURRENCY_SET)
+            .permission(Perms.currencyCommand(currency, Perms.COMMAND_CURRENCY_SET))
             .description(Lang.COMMAND_CURRENCY_SET_DESC)
             .withArguments(
                 Arguments.playerName(CommandArguments.PLAYER),

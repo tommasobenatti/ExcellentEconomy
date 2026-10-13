@@ -34,7 +34,7 @@ public class RemoveCommand implements CurrencyCommand {
     @Override
     public void build(@NonNull LiteralNodeBuilder builder, @NonNull ExcellentCurrency currency) {
         builder
-            .permission(Perms.COMMAND_CURRENCY_TAKE)
+            .permission(Perms.currencyCommand(currency, Perms.COMMAND_CURRENCY_TAKE))
             .description(Lang.COMMAND_CURRENCY_TAKE_DESC)
             .withArguments(
                 Arguments.playerName(CommandArguments.PLAYER),

@@ -30,7 +30,7 @@ public class TopCommand implements CurrencyCommand {
     @Override
     public void build(@NonNull LiteralNodeBuilder builder, @NonNull ExcellentCurrency currency) {
         builder
-            .permission(Perms.COMMAND_CURRENCY_TOP)
+            .permission(Perms.currencyCommand(currency, Perms.COMMAND_CURRENCY_TOP))
             .description(Lang.COMMAND_CURRENCY_TOP_DESC)
             .withArguments(Arguments.integer(CommandArguments.AMOUNT, 1)
                 .optional()

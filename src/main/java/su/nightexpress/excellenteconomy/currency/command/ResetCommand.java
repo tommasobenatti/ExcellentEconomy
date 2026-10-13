@@ -36,7 +36,7 @@ public class ResetCommand implements CurrencyCommand {
     @Override
     public void build(@NonNull LiteralNodeBuilder builder, @NonNull ExcellentCurrency currency) {
         builder
-            .permission(Perms.COMMAND_RESET)
+            .permission(Perms.currencyCommand(currency, Perms.COMMAND_RESET))
             .description(Lang.COMMAND_RESET_DESC)
             .withArguments(Arguments.playerName(CommandArguments.PLAYER))
             .withFlags(CommandArguments.FLAG_SILENT, CommandArguments.FLAG_NO_FEEDBACK);

@@ -152,19 +152,30 @@ public class CommandManager extends SimpleManager<EconomyPlugin> {
         this.registerCurrencyCommand(currency, NightCommand.hub(this.plugin, currency.getCommandAliases(),
             rootBuilder -> {
                 rootBuilder.localized(currency.getName());
+                Perms.registerChild(currency.getPermission(), Perms.CURRENCY);
                 rootBuilder.permission(currency.isPermissionRequired() ? currency.getPermission() : null);
                 rootBuilder.description(PlaceholderContext.builder().with(currency.placeholders()).build().apply(
                     Lang.COMMAND_CURRENCY_ROOT_DESC.text()));
 
                 this.currencyRegisterMap.forEach((id, registerContext) -> {
-                    if (!registerContext.isAvailable(currency)) return;
+                    if (!registerContext.isAvailable(currency) || !currency.isCommandEnabled(id)) return;
 
                     CommandDefinition definition = registerContext.getDefinitionOrDefault();
 
                     if (!definition.childrenEnabled() && !definition.standaloneEnabled()) return;
 
                     CurrencyCommand command = registerContext.createCommand();
-                    NodeExecutor executor = (context, arguments) -> command.execute(context, arguments, currency);
+                    var commandBuilder = Commands.literal(definition.childrenAlias());
+                    command.build(commandBuilder, currency);
+                    String permission = commandBuilder.build().getPermission();
+                    NodeExecutor executor = (context, arguments) -> {
+                        if ((permission != null && !context.hasPermission(permission))
+                            || (context.isPlayer() && !currency.hasPermission(context.getPlayerOrThrow()))) {
+                            currency.sendPrefixed(CoreLang.ERROR_NO_PERMISSION, context.getSender());
+                            return false;
+                        }
+                        return command.execute(context, arguments, currency);
+                    };
 
                     if (command.isFallback()) {
                         rootBuilder.executes(executor);

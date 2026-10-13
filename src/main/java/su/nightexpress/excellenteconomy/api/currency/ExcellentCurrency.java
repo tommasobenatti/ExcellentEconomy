@@ -26,6 +26,10 @@ public interface ExcellentCurrency extends PlaceholderResolvable {
 
     boolean hasPermission(@NonNull Player player);
 
+    default boolean isCommandEnabled(@NonNull String commandId) {
+        return true;
+    }
+
     boolean isPrimary();
 
     boolean isUnlimited();
@@ -132,4 +136,3 @@ public interface ExcellentCurrency extends PlaceholderResolvable {
 
     boolean isLeaderboardEnabled();
 }
-

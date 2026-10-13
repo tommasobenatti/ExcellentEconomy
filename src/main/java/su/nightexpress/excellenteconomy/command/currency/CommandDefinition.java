@@ -49,7 +49,7 @@ public record CommandDefinition(
     @NonNull
     public static CommandDefinition standaloneOnly(@NonNull String childrenAlias,
                                                    @NonNull String... standaloneAliases) {
-        return new CommandDefinition(false, childrenAlias, false, standaloneAliases);
+        return new CommandDefinition(false, childrenAlias, true, standaloneAliases);
     }
 
     @Override

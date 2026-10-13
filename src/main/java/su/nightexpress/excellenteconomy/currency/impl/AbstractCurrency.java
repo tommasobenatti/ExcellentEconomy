@@ -26,6 +26,8 @@ import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.function.Consumer;
 import java.util.function.DoubleFunction;
 import java.util.function.Function;
@@ -65,6 +67,7 @@ public abstract class AbstractCurrency implements ExcellentCurrency, ConfigBacke
     protected boolean leaderboardEnabled;
 
     protected String messagePrefix;
+    private final Set<String> disabledCommands = new HashSet<>();
 
     protected AbstractCurrency(@NonNull Path path, @NonNull String id) {
         this.path = path;
@@ -120,6 +123,12 @@ public abstract class AbstractCurrency implements ExcellentCurrency, ConfigBacke
             "Currency command aliases. Split with comma.",
             "[*] Server reboot is required for the changes to apply."
         ).read(config));
+
+        this.disabledCommands.clear();
+        this.disabledCommands.addAll(Arrays.asList(ConfigValue.create("Commands.Disabled", new String[0],
+            "Command IDs disabled for this currency: balance, exchange, give, giveall, payments, remove, reset, send, set, top.",
+            "Applies to subcommands, standalone aliases, and the root balance fallback. Restart after changes."
+        ).read(config)));
 
         this.setIcon(ConfigValue.create("Icon",
             NightItem.fromType(Material.GOLD_NUGGET),
@@ -216,6 +225,7 @@ public abstract class AbstractCurrency implements ExcellentCurrency, ConfigBacke
         config.set("Symbol", this.symbol);
         config.set("Prefix", this.prefix);
         config.set("Command_Aliases", String.join(",", Arrays.asList(this.commandAliases)));
+        config.setStringArray("Commands.Disabled", this.disabledCommands.toArray(String[]::new));
         config.set("Format", this.format);
         config.set("Format_Short", this.formatShort);
         config.set("Icon", this.icon);
@@ -274,8 +284,12 @@ public abstract class AbstractCurrency implements ExcellentCurrency, ConfigBacke
 
     @Override
     public boolean hasPermission(@NonNull Player player) {
-        return !this.permissionRequired || (player.hasPermission(this.getPermission()) || player.hasPermission(
-            Perms.CURRENCY));
+        return !this.permissionRequired || player.hasPermission(this.getPermission());
+    }
+
+    @Override
+    public boolean isCommandEnabled(@NonNull String commandId) {
+        return !this.disabledCommands.contains(commandId);
     }
 
     @Override

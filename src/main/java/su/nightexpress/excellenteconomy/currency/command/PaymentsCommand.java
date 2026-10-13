@@ -37,10 +37,10 @@ public class PaymentsCommand implements CurrencyCommand {
     @Override
     public void build(@NonNull LiteralNodeBuilder builder, @NonNull ExcellentCurrency currency) {
         builder
-            .permission(Perms.COMMAND_CURRENCY_PAYMENTS)
+            .permission(Perms.currencyCommand(currency, Perms.COMMAND_CURRENCY_PAYMENTS))
             .description(Lang.COMMAND_CURRENCY_PAYMENTS_DESC)
             .withArguments(Arguments.playerName(CommandArguments.PLAYER).permission(
-                Perms.COMMAND_CURRENCY_PAYMENTS_OTHERS).optional())
+                Perms.currencyCommand(currency, Perms.COMMAND_CURRENCY_PAYMENTS_OTHERS)).optional())
             .withFlags(CommandArguments.FLAG_SILENT);
     }
 

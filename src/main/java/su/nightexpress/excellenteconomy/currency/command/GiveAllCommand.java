@@ -30,7 +30,7 @@ public class GiveAllCommand implements CurrencyCommand {
     @Override
     public void build(@NonNull LiteralNodeBuilder builder, @NonNull ExcellentCurrency currency) {
         builder
-            .permission(Perms.COMMAND_CURRENCY_GIVE_ALL)
+            .permission(Perms.currencyCommand(currency, Perms.COMMAND_CURRENCY_GIVE_ALL))
             .description(Lang.COMMAND_CURRENCY_GIVE_ALL_DESC)
             .withArguments(CommandArguments.positiveAmount(currency))
             .withFlags(CommandArguments.FLAG_SILENT, CommandArguments.FLAG_NO_FEEDBACK);

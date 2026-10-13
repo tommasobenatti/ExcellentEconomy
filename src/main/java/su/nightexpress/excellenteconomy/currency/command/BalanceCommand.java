@@ -35,10 +35,10 @@ public class BalanceCommand implements CurrencyCommand {
     @Override
     public void build(@NonNull LiteralNodeBuilder builder, @NonNull ExcellentCurrency currency) {
         builder
-            .permission(Perms.COMMAND_CURRENCY_BALANCE)
+            .permission(Perms.currencyCommand(currency, Perms.COMMAND_CURRENCY_BALANCE))
             .description(Lang.COMMAND_CURRENCY_BALANCE_DESC)
             .withArguments(Arguments.playerName(CommandArguments.PLAYER).optional().permission(
-                Perms.COMMAND_CURRENCY_BALANCE_OTHERS));
+                Perms.currencyCommand(currency, Perms.COMMAND_CURRENCY_BALANCE_OTHERS)));
     }
 
     @Override
