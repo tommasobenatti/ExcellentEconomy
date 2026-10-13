@@ -20,6 +20,7 @@ repositories {
     maven("https://jitpack.io")
     maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
     maven("https://repo.rosewooddev.io/repository/public/")
+    maven("https://repo.codemc.io/repository/creatorfromhell/")
 }
 
 dependencies {
@@ -27,6 +28,7 @@ dependencies {
     compileOnly("com.github.MilkBowl:VaultAPI:1.7") {
         exclude(group = "org.bukkit", module = "bukkit")
     }
+    compileOnly("net.milkbowl.vault:VaultUnlockedAPI:2.20")
     compileOnly("su.nightexpress.nightcore:main:2.16.7")
     compileOnly("me.clip:placeholderapi:2.11.6")
     compileOnly("org.black_ixx:playerpoints:3.0.0")
