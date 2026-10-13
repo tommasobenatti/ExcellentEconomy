@@ -78,4 +78,13 @@ class CurrencyManagerTest {
         manager.allowOperations();
         assertTrue(manager.give(OperationContext.custom("test").silent(), senderUser, currency, 10).success());
     }
+
+    @Test
+    void shuttingDownCannotBeUndoneByABackgroundMaintenanceTask() {
+        manager.prepareShutdown();
+        manager.allowOperations();
+        assertFalse(manager.canPerformOperations());
+        assertTrue(manager.give(OperationContext.custom("test").silent(), senderUser, currency, 10).failure());
+        assertEquals(1_000, senderUser.getBalance(currency));
+    }
 }
