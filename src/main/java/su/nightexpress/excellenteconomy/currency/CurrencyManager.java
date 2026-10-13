@@ -62,6 +62,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
     private final UserManager      userManager;
 
     private volatile boolean operationsAllowed;
+    private boolean shuttingDown;
     private CurrencyLogger logger;
 
     public CurrencyManager(@NonNull EconomyPlugin plugin,
@@ -98,6 +99,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
 
     @Override
     protected void onShutdown() {
+        this.prepareShutdown();
         this.registry.getCurrencies().forEach(this::unregisterCurrency);
 
         if (this.logger != null) this.logger.shutdown();
@@ -111,6 +113,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
 
     public void allowOperations() {
         synchronized (UserBalance.class) {
+            if (this.shuttingDown) return;
             this.operationsAllowed = true;
             this.dataHandler.setSynchronizationActive(true);
         }
@@ -128,6 +131,13 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
             if (!this.operationsAllowed) return false;
             this.disableOperations();
             return true;
+        }
+    }
+
+    public void prepareShutdown() {
+        synchronized (UserBalance.class) {
+            this.shuttingDown = true;
+            this.disableOperations();
         }
     }
 

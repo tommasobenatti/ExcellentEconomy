@@ -123,6 +123,7 @@ public class EconomyPlugin extends NightPlugin {
 
     @Override
     public void disable() {
+        if (this.currencyManager != null) this.currencyManager.prepareShutdown();
         if (this.vaultUnlockedProvider != null) {
             this.getServer().getServicesManager().unregister(this.vaultUnlockedProvider);
             this.vaultUnlockedProvider = null;

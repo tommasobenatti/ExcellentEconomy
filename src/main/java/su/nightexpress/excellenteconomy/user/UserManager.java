@@ -50,14 +50,14 @@ public class UserManager extends AbstractUserManager<EconomyPlugin, CoinsUser> {
 
     @NonNull
     public Optional<CoinsUser> findById(UUID uuid) {
-        synchronized (this.repository) {
+        synchronized (UserBalance.class) {
             return this.getOrFetch(uuid);
         }
     }
 
     @NonNull
     public Optional<CoinsUser> findByName(String name) {
-        synchronized (this.repository) {
+        synchronized (UserBalance.class) {
             return this.getOrFetch(name);
         }
     }
@@ -81,7 +81,7 @@ public class UserManager extends AbstractUserManager<EconomyPlugin, CoinsUser> {
 
     public boolean createAccount(UUID uuid, String name) {
         if (name.isBlank() || name.length() > 64 || name.chars().anyMatch(Character::isISOControl)) return false;
-        synchronized (this.repository) {
+        synchronized (UserBalance.class) {
             if (this.findById(uuid).isPresent()) return true;
             CoinsUser user = this.create(uuid, name);
             this.dataAccessor.insert(user);
@@ -92,7 +92,7 @@ public class UserManager extends AbstractUserManager<EconomyPlugin, CoinsUser> {
 
     public boolean renameAccount(UUID uuid, String name) {
         if (name.isBlank() || name.length() > 64 || name.chars().anyMatch(Character::isISOControl)) return false;
-        synchronized (this.repository) {
+        synchronized (UserBalance.class) {
             CoinsUser user = this.findById(uuid).orElse(null);
             if (user == null || user.isOnline()) return false;
             this.repository.getLoadedByNameMap().remove(user.getName().toLowerCase(java.util.Locale.ROOT));
@@ -105,7 +105,7 @@ public class UserManager extends AbstractUserManager<EconomyPlugin, CoinsUser> {
     }
 
     public boolean deleteAccount(UUID uuid) {
-        synchronized (this.repository) {
+        synchronized (UserBalance.class) {
             CoinsUser user = this.findById(uuid).orElse(null);
             if (user == null || user.isOnline()) return false;
             this.dataAccessor.deleteById(uuid);

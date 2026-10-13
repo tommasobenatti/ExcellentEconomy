@@ -17,6 +17,10 @@ public class UserBalance {
 
     public UserBalance(@NonNull Map<String, Double> balanceMap) {
         this.balanceMap = new ConcurrentHashMap<>(balanceMap);
+        this.balanceMap.replaceAll((id, amount) -> {
+            requireFinite(amount);
+            return Math.max(0, amount);
+        });
     }
 
     /**
@@ -48,7 +52,7 @@ public class UserBalance {
     }
 
     public boolean has(@NonNull ExcellentCurrency currency, double amount) {
-        return this.get(currency) >= amount;
+        return BalanceTransactions.validAmount(amount) && this.get(currency) >= amount;
     }
 
     public double get(@NonNull ExcellentCurrency currency) {
@@ -68,7 +72,11 @@ public class UserBalance {
     public void add(@NonNull String currencyId, double amount) {
         requireFinite(amount);
         synchronized (UserBalance.class) {
-            this.balanceMap.compute(currencyId, (k, v) -> Math.max(0, (v == null ? 0D : v) + Math.abs(amount)));
+            this.balanceMap.compute(currencyId, (k, v) -> {
+                double next = (v == null ? 0D : v) + Math.abs(amount);
+                requireFinite(next);
+                return Math.max(0, next);
+            });
         }
     }
 

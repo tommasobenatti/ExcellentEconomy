@@ -22,7 +22,7 @@ public class Perms {
             permission = new Permission(name, PermissionDefault.FALSE);
             Bukkit.getPluginManager().addPermission(permission);
         }
-        permission.addParent(parent, true);
+        if (!parent.getChildren().containsKey(name)) permission.addParent(parent, true);
     }
 
     public static final String PREFIX          = "excellenteconomy.";
