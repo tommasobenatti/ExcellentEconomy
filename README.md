@@ -17,6 +17,7 @@ Current fork version: **2.8.1-mcexp.1**.
 - **Folia:** asynchronous account lookups return to the sender's entity scheduler; player notifications use their recipient's scheduler. Shared balances, settings, registries, raw formatting, and maintenance admission are protected for concurrent use.
 - **Safer startup and shutdown:** optional Vault classes are isolated, a primary currency exists without Vault, native services are unregistered on reload/disable, and background maintenance cannot reopen a closing economy.
 - **Legacy data:** persisted negative balances load as zero instead of becoming positive money.
+- **Configuration upgrades:** legacy compact currency formats are normalized and saved; existing storage names, currency settings, aliases, and custom messages are retained.
 
 Existing features remain: custom currencies and formatting, wallet, exchange rates, PlaceholderAPI and legacy CoinsEngine placeholders, transaction logs, migrations, initial/max balances, and leaderboards.
 
@@ -48,6 +49,20 @@ Compilation and mocked API tests do **not** certify every server build or third-
 5. Configure permissions and taxes, then restart to apply command/primary-currency changes consistently.
 
 Existing storage is retained; no new database schema is introduced. The legacy zero balance floor remains mandatory. The separate [CoinsEngine upgrade guide](https://nightexpressdev.com/excellenteconomy/upgrade-guide/) applies to switching from CoinsEngine.
+
+### Keep an existing configuration and database
+
+Copy the **whole existing data folder** into `plugins/ExcellentEconomy` while the server is stopped, including `engine.yml`, `config.yml`, `commands.yml`, `currencies/`, `lang/`, `menu/`, and the database named in `Database.SQLite.FileName`. If changing from CoinsEngine, remove its JAR before starting ExcellentEconomy. Never run both plugins against the same database.
+
+Keep `Database.Table_Prefix` unchanged, including a legacy value such as `coinsengine`; regenerating `engine.yml` with the new default prefix would select a different user table. Keep currency filenames/IDs and `Column_Name` values unchanged. Existing root aliases such as `coinsengine,coe` remain valid through `Plugin.Command_Aliases`.
+
+The supplied two-currency configuration (`coins` and `souls`) is covered by regression tests: integer balances, transfer/exchange restrictions, synchronization, initial/max values, aliases, custom notifications, and leaderboard settings survive loading. New command switches enable the existing commands and transfer taxes start **disabled**. The obsolete `%currency_short_symbol%` is removed from `Format_Short` and the normalized value is saved; compact `%amount%` already includes its suffix. Repeated loading produces the same result.
+
+Existing `Children.Aliases`/`Dedicated` sections are read by the command-definition compatibility reader. Current definitions use `Children.Alias`/`Standalone`; current `give`, `giveall`, and `send` entries take effect when stale `add`, `addall`, and `pay` entries also exist.
+
+**Check the primary currency:** `Integration.Vault.EconomyCurrency` must name a currency file that actually exists. A value of `money` with only `coins.yml` and `souls.yml` does not register an economy provider. The upgrade retains this setting until an administrator chooses the intended currency; it does not create or rename currencies to guess that choice.
+
+Older `General.Amount_Shortcuts` and `Economy.Command_Shortcuts` sections remain in the file for preservation but are not read by the current upstream architecture. Amount shortcuts come from NightCore's `Number.Shortcut_List`; the supplied `k`, `m`, and `b` values match its defaults. Standalone command switches come from `commands.yml`. This check does not change another plugin's NightCore configuration.
 
 ## Vault and Vault Unlocked
 

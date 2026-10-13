@@ -116,7 +116,7 @@ class LegacyConfigurationTest {
         });
         assertTrue(main.getBoolean("Integration.VaultUnlocked.Enabled"));
         assertEquals(300, Config.TOPS_UPDATE_INTERVAL.get());
-        assertEquals("money", Config.INTEGRATION_VAULT_ECONOMY_CURRENCY.get());
+        assertEquals(previous.get("Integration.Vault.EconomyCurrency"), Config.INTEGRATION_VAULT_ECONOMY_CURRENCY.get());
         main.saveChanges();
         assertEquals("coinsengine", FileConfig.load(engine.getPath()).getString("Database.Table_Prefix"));
     }
