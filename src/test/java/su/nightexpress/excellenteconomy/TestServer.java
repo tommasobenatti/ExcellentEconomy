@@ -1,0 +1,48 @@
+package su.nightexpress.excellenteconomy;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Server;
+import org.bukkit.plugin.PluginManager;
+import su.nightexpress.excellenteconomy.api.currency.ExcellentCurrency;
+import su.nightexpress.excellenteconomy.user.CoinsUser;
+import su.nightexpress.excellenteconomy.user.UserBalance;
+
+import java.util.Map;
+import java.util.UUID;
+import java.util.logging.Logger;
+
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.Mockito.*;
+
+public final class TestServer {
+
+    public static final PluginManager PLUGINS = mock(PluginManager.class);
+
+    static {
+        Server server = mock(Server.class);
+        when(server.getLogger()).thenReturn(Logger.getLogger("ExcellentEconomyTests"));
+        when(server.getName()).thenReturn("TestServer");
+        when(server.getVersion()).thenReturn("26.1.2");
+        when(server.getBukkitVersion()).thenReturn("26.1.2");
+        when(server.getPluginManager()).thenReturn(PLUGINS);
+        Bukkit.setServer(server);
+    }
+
+    private TestServer() {}
+
+    public static ExcellentCurrency currency(String id) {
+        ExcellentCurrency currency = mock(ExcellentCurrency.class);
+        when(currency.getId()).thenReturn(id);
+        when(currency.isDecimal()).thenReturn(true);
+        when(currency.isTransferAllowed()).thenReturn(true);
+        when(currency.isUnlimited()).thenReturn(true);
+        when(currency.isUnderLimit(anyDouble())).thenAnswer(call -> Double.isFinite(call.getArgument(0)));
+        when(currency.floorIfNeeded(anyDouble())).thenAnswer(call -> Math.max(0D, call.getArgument(0)));
+        when(currency.floorAndLimit(anyDouble())).thenAnswer(call -> Math.max(0D, call.getArgument(0)));
+        return currency;
+    }
+
+    public static CoinsUser user(String name, ExcellentCurrency currency, double balance) {
+        return new CoinsUser(UUID.randomUUID(), name, new UserBalance(Map.of(currency.getId(), balance)), Map.of(), 0, false);
+    }
+}

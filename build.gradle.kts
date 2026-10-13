@@ -30,9 +30,19 @@ dependencies {
     compileOnly("su.nightexpress.nightcore:main:2.16.7")
     compileOnly("me.clip:placeholderapi:2.11.6")
     compileOnly("org.black_ixx:playerpoints:3.0.0")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.13.4")
+    testImplementation("org.mockito:mockito-core:5.20.0")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+configurations.testImplementation {
+    extendsFrom(configurations.compileOnly.get())
 }
 
 tasks {
+    test {
+        useJUnitPlatform()
+    }
     withType<JavaCompile> {
         options.encoding = "UTF-8"
     }
