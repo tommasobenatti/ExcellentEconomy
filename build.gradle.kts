@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "su.nightexpress.excellenteconomy"
-version = "2.8.0"
+version = "2.8.1-mcexp.1"
 
 java {
     toolchain {
@@ -24,7 +24,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:26.1.2.build.+")
+    compileOnly("io.papermc.paper:paper-api:${providers.gradleProperty("paperApiVersion").getOrElse("26.3.build.178-stable")}")
     compileOnly("com.github.MilkBowl:VaultAPI:1.7") {
         exclude(group = "org.bukkit", module = "bukkit")
     }
