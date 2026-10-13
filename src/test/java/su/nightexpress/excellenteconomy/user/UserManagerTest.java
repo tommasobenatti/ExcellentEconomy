@@ -44,6 +44,7 @@ class UserManagerTest {
             UUID uuid = UUID.randomUUID();
             assertFalse(users.createAccount(uuid, ""));
             assertFalse(users.createAccount(uuid, "x".repeat(65)));
+            assertFalse(users.createAccount(uuid, "x".repeat(33)));
             assertTrue(users.createAccount(uuid, "PlayerName"));
             assertEquals(25, users.findById(uuid).orElseThrow().getBalance(currency));
             assertTrue(users.createAccount(uuid, "IgnoredExistingName"));
