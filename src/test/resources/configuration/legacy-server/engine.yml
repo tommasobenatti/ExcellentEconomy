@@ -1,0 +1,29 @@
+Plugin:
+  Name: Economy
+  Prefix: <lyellow><b>Economy</b></lyellow><dgray> » </dgray><gray>
+  Command_Aliases: coinsengine,coe
+  Language: en
+Database:
+  Type: SQLITE
+  Sync_Interval: -1
+  Table_Prefix: coinsengine
+  MySQL:
+    Username: fixture-only
+    Password: fixture-only
+    Host: fixture-only
+    Database: fixture-only
+    Options: ?allowPublicKeyRetrieval=true&useSSL=false
+    ServerId: fixture-only
+  SQLite:
+    FileName: data.db
+  Purge:
+    Enabled: false
+    For_Period: 60
+  Max_Lifetime: 1800000
+UserData:
+  Cache:
+    LifeTime: 300
+    CleanUp_Interval: 300
+  Scheduled_Save_Interval: 20
+  Scheduled_Save_Delay: 1.0
+  Scheduled_Save_Sync_Pause: 3

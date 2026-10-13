@@ -1,0 +1,13 @@
+Command:
+  Currency:
+    Give:
+      Notify: '[prefix="false"]<gray>+%amount% %currency_prefix%'
+    Take:
+      Notify: '[prefix="false"]<gray>-%amount% %currency_prefix%'
+Leaderboards:
+  UI:
+    Leaderboard:
+      Entry:
+        Name: <yellow>#%pos%</yellow> <white>%player_name%</white>
+        Lore:
+        - <green>%balance%</green>

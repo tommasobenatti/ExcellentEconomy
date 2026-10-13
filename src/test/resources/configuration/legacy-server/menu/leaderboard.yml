@@ -1,0 +1,55 @@
+Settings:
+  MenuType: minecraft:generic_9x5
+  Title: <black>Balance Top - %currency_name%</black>
+  Auto_Refresh: -1
+  PlaceholderAPI:
+    Enabled: false
+  AutoRefresh:
+    Interval: 0
+Entry:
+  Name: <yellow>#%pos%</yellow> <white>%player_name%</white>
+  Lore:
+  - <green>%balance%</green>
+  Slots: 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35
+  Icon:
+    Material: minecraft:player_head
+    Lore: []
+Buttons:
+  black_stained_glass_pane:
+    States:
+      default:
+        Icon:
+          Material: minecraft:black_stained_glass_pane
+          Lore: []
+          Hide_Tooltip: true
+    Slots: 36,37,38,39,40,41,42,43,44
+  next_page:
+    States:
+      default:
+        Icon:
+          Material: minecraft:arrow
+          Display_Name: <white><b><u>Next Page</u> →</b></white>
+          Lore: []
+        Actions:
+          Base: next_page
+        Condition: has_next_page
+    Slots: '44'
+  previous_page:
+    States:
+      default:
+        Icon:
+          Material: minecraft:arrow
+          Display_Name: <white><b>← <u>Previous Page</u></b></white>
+          Lore: []
+        Actions:
+          Base: previous_page
+        Condition: has_previous_page
+    Slots: '36'
+  close:
+    States:
+      default:
+        Icon:
+          Material: minecraft:iron_door
+          Display_Name: <red><b>Close</b></red>
+          Lore: []
+    Slots: '40'

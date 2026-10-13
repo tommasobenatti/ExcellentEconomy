@@ -1,0 +1,22 @@
+Name: Coins
+Symbol: ''
+Format: '%amount%'
+Format_Short: '%currency_symbol%%amount%%currency_short_symbol%'
+Command_Aliases: coins,coin
+Icon:
+  Material: SUNFLOWER
+Decimal: false
+Synchronized: false
+Permission_Required: false
+Transfer_Allowed: false
+Transfer_Min_Amount: 0.0
+Start_Value: 0.0
+Max_Value: -1.0
+Exchange:
+  Allowed: false
+  Rates:
+    other: 5.0
+Column_Name: coins
+Prefix: Coins
+Leaderboard:
+  Enabled: true

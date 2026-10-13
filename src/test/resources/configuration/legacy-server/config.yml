@@ -1,0 +1,41 @@
+General:
+  Amount_Shortcuts:
+    million:
+      Literal: m
+      Multiplier: 1000000.0
+    thousand:
+      Literal: k
+      Multiplier: 1000.0
+    billion:
+      Literal: b
+      Multiplier: 1.0E9
+  PlaceholderAPI_For_Currency_Format: true
+Economy:
+  Command_Shortcuts:
+    Enabled: true
+Top:
+  Entries_Per_Page: 10
+  Update_Interval: 300
+  Enabled: true
+  Use_GUI: true
+Logs:
+  DateFormat: dd/MM/yyyy HH:mm:ss
+  Enabled:
+    Console: false
+    File: true
+  Write_Interval: 5
+Currency:
+  Prefix:
+    Enabled: true
+    Format: <lyellow><b>%currency_prefix%</b></lyellow><dgray> » </dgray><gray>
+  Command:
+    Default_To_Balance: true
+Integration:
+  Vault:
+    Enabled: true
+    EconomyCurrency: money
+Wallet:
+  Enabled: true
+  Command_Aliases: wallet
+Migration:
+  Enabled: true
