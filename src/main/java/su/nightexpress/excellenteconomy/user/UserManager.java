@@ -6,6 +6,7 @@ import su.nightexpress.excellenteconomy.EconomyPlugin;
 import su.nightexpress.excellenteconomy.api.currency.ExcellentCurrency;
 import su.nightexpress.excellenteconomy.currency.CurrencyRegistry;
 import su.nightexpress.excellenteconomy.data.DataHandler;
+import su.nightexpress.excellenteconomy.data.DataColumns;
 import su.nightexpress.excellenteconomy.user.data.CurrencySettings;
 import su.nightexpress.nightcore.user.AbstractUserManager;
 import su.nightexpress.nightcore.user.data.DefaultUserDataAccessor;
@@ -80,7 +81,7 @@ public class UserManager extends AbstractUserManager<EconomyPlugin, CoinsUser> {
     }
 
     public boolean createAccount(UUID uuid, String name) {
-        if (name.isBlank() || name.length() > 64 || name.chars().anyMatch(Character::isISOControl)) return false;
+        if (name.isBlank() || name.length() > DataColumns.USER_NAME_LENGTH || name.chars().anyMatch(Character::isISOControl)) return false;
         synchronized (UserBalance.class) {
             if (this.findById(uuid).isPresent()) return true;
             CoinsUser user = this.create(uuid, name);
@@ -91,7 +92,7 @@ public class UserManager extends AbstractUserManager<EconomyPlugin, CoinsUser> {
     }
 
     public boolean renameAccount(UUID uuid, String name) {
-        if (name.isBlank() || name.length() > 64 || name.chars().anyMatch(Character::isISOControl)) return false;
+        if (name.isBlank() || name.length() > DataColumns.USER_NAME_LENGTH || name.chars().anyMatch(Character::isISOControl)) return false;
         synchronized (UserBalance.class) {
             CoinsUser user = this.findById(uuid).orElse(null);
             if (user == null || user.isOnline()) return false;

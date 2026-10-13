@@ -15,13 +15,15 @@ import java.util.UUID;
 
 public class DataColumns {
 
+    public static final int USER_NAME_LENGTH = 32;
+
     private DataColumns() {
     }
 
     public static final Column<Integer> ID = Column.intType("id").primaryKey().autoIncrement().build();
 
     public static final Column<UUID>   USER_UUID      = Column.uuidType("uuid").build();
-    public static final Column<String> USER_NAME      = Column.stringType("name", 32).build();
+    public static final Column<String> USER_NAME      = Column.stringType("name", USER_NAME_LENGTH).build();
     public static final Column<Long>   USER_LAST_SEEN = Column.longType("last_seen")
         .defaultValue(String.valueOf(System.currentTimeMillis()))
         .build();
