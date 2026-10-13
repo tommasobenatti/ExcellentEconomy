@@ -8,6 +8,8 @@ import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import org.bukkit.Registry;
 import su.nightexpress.excellenteconomy.currency.tax.TransferTax;
+import su.nightexpress.nightcore.configuration.codec.ConfigCodecs;
+import su.nightexpress.nightcore.configuration.codec.CodecRegistry;
 import su.nightexpress.excellenteconomy.api.currency.ExcellentCurrency;
 import su.nightexpress.excellenteconomy.user.CoinsUser;
 import su.nightexpress.excellenteconomy.user.UserBalance;
@@ -25,6 +27,7 @@ public final class TestServer {
     private static final MockedStatic<RegistryAccess> REGISTRIES = mockStatic(RegistryAccess.class);
 
     static {
+        ConfigCodecs.init(new CodecRegistry());
         RegistryAccess access = mock(RegistryAccess.class);
         REGISTRIES.when(RegistryAccess::registryAccess).thenReturn(access);
         when(access.getRegistry(any(Class.class))).thenAnswer(call -> mock(Registry.class));

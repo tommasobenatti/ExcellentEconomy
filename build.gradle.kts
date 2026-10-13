@@ -1,6 +1,7 @@
 plugins {
     id("java-library")
     id("maven-publish")
+    id("jacoco")
 }
 
 group = "su.nightexpress.excellenteconomy"
@@ -41,9 +42,20 @@ configurations.testImplementation {
     extendsFrom(configurations.compileOnly.get())
 }
 
+jacoco {
+    toolVersion = "0.8.15"
+}
+
 tasks {
     test {
         useJUnitPlatform()
+    }
+
+    jacocoTestReport {
+        dependsOn(test)
+        reports {
+            xml.required = true
+        }
     }
     withType<JavaCompile> {
         options.encoding = "UTF-8"

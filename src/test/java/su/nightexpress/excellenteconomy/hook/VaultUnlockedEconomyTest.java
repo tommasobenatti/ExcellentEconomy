@@ -59,6 +59,14 @@ class VaultUnlockedEconomyTest {
             assertEquals(10, target.getBalance(money));
         }
         finally { reset(TestServer.PLUGINS); }
+
+        when(money.isUnderLimit(anyDouble())).thenAnswer(call -> (double) call.getArgument(0) <= 50);
+        assertFalse(economy.deposit("Shop", source.getId(), BigDecimal.ONE).transactionSuccess());
+        assertTrue(economy.canWithdraw("Shop", source.getId(), BigDecimal.ONE).transactionSuccess());
+        assertTrue(economy.withdraw("Shop", source.getId(), BigDecimal.ONE).transactionSuccess());
+        assertEquals(99, source.getBalance(money));
+        assertTrue(economy.set("Shop", source.getId(), new BigDecimal("40")).transactionSuccess());
+        assertEquals(40, source.getBalance(money));
     }
 
     @Test

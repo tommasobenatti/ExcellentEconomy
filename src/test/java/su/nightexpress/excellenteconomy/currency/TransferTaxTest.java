@@ -4,10 +4,37 @@ import org.junit.jupiter.api.Test;
 import su.nightexpress.excellenteconomy.currency.tax.TransferTax;
 
 import java.util.List;
+import org.junit.jupiter.api.io.TempDir;
+import java.nio.file.Path;
+import su.nightexpress.nightcore.config.FileConfig;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class TransferTaxTest {
+
+    @TempDir Path directory;
+
+    @Test
+    void loadsThresholdsPayerAndPermissionTiersFromCurrencyConfig() {
+        su.nightexpress.excellenteconomy.TestServer.initialize();
+        FileConfig config = FileConfig.load(directory.resolve("tax.yml"));
+        assertFalse(TransferTax.read(config).enabled());
+        config.set("Transfer_Tax.Enabled", true);
+        config.set("Transfer_Tax.Payer", "receiver");
+        config.set("Transfer_Tax.Brackets.base.Percent", 10D);
+        config.set("Transfer_Tax.Permission_Tiers.vip.Permission", "tax.vip");
+        config.set("Transfer_Tax.Permission_Tiers.vip.Priority", 10);
+        config.set("Transfer_Tax.Permission_Tiers.vip.Brackets.base.Threshold", 0D);
+        config.set("Transfer_Tax.Permission_Tiers.vip.Brackets.base.Percent", 2D);
+        TransferTax tax = TransferTax.read(config);
+        assertEquals(10, tax.quote(100, true, permission -> false).tax());
+        assertEquals(98, tax.quote(100, true, "tax.vip"::equals).credit());
+        config.set("Transfer_Tax.Payer", "nobody");
+        assertThrows(IllegalArgumentException.class, () -> TransferTax.read(config));
+        config.set("Transfer_Tax.Payer", "SENDER");
+        config.set("Transfer_Tax.Brackets.base.Percent", "invalid");
+        assertThrows(IllegalArgumentException.class, () -> TransferTax.read(config));
+    }
 
     private final List<TransferTax.Bracket> brackets = List.of(
         new TransferTax.Bracket(0, 0), new TransferTax.Bracket(100, 5), new TransferTax.Bracket(1_000, 10));

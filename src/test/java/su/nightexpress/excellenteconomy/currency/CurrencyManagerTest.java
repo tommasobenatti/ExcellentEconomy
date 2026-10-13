@@ -15,6 +15,8 @@ import su.nightexpress.excellenteconomy.user.CoinsUser;
 import su.nightexpress.excellenteconomy.user.UserManager;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.concurrent.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -48,6 +50,26 @@ class CurrencyManagerTest {
         assertTrue(manager.send(sender, receiver, currency, 100));
         assertEquals(890, senderUser.getBalance(currency));
         assertEquals(100, receiver.getBalance(currency));
+    }
+
+    @Test
+    void racingPayCallsKeepTheCombinedBalanceConstant() throws Exception {
+        try (ExecutorService pool = Executors.newFixedThreadPool(8)) {
+            for (int round = 0; round < 20; round++) {
+                senderUser.getBalance().set("money", 1_000);
+                receiver.getBalance().set("money", 0);
+                CyclicBarrier start = new CyclicBarrier(8);
+                List<Callable<Boolean>> calls = new ArrayList<>();
+                for (int i = 0; i < 8; i++) calls.add(() -> {
+                    start.await(10, TimeUnit.SECONDS);
+                    return manager.send(sender, receiver, currency, 900);
+                });
+                int successes = 0;
+                for (Future<Boolean> result : pool.invokeAll(calls)) if (result.get()) successes++;
+                assertEquals(1, successes);
+                assertEquals(1_000, senderUser.getBalance(currency) + receiver.getBalance(currency));
+            }
+        }
     }
 
     @Test
