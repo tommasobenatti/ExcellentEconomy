@@ -50,14 +50,14 @@ public class UserManager extends AbstractUserManager<EconomyPlugin, CoinsUser> {
 
     @NonNull
     public Optional<CoinsUser> findById(UUID uuid) {
-        synchronized (UserBalance.class) {
+        synchronized (this.repository) {
             return this.getOrFetch(uuid);
         }
     }
 
     @NonNull
     public Optional<CoinsUser> findByName(String name) {
-        synchronized (UserBalance.class) {
+        synchronized (this.repository) {
             return this.getOrFetch(name);
         }
     }

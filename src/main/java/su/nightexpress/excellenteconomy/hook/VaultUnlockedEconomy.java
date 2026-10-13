@@ -98,7 +98,8 @@ public final class VaultUnlockedEconomy implements Economy {
                 case "withdraw" -> current - value;
                 default -> value;
             };
-            if (!this.api.currencyManager().canPerformOperations() || !BalanceTransactions.validAmount(next) || !currency.isUnderLimit(next))
+            if (!this.api.currencyManager().canPerformOperations() || !BalanceTransactions.validAmount(next)
+                || (!operation.equals("withdraw") && !currency.isUnderLimit(next)))
                 return failure(BigDecimal.valueOf(current), "Insufficient funds, balance limit, or disabled operations");
             boolean success = preview || switch (operation) {
                 case "deposit" -> this.api.currencyManager().give(this.context(pluginName), user, currency, value).success();

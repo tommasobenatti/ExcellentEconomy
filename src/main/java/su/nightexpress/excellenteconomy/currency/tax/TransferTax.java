@@ -92,7 +92,8 @@ public record TransferTax(boolean enabled, Payer payer, List<Bracket> brackets, 
     private static List<Bracket> readBrackets(FileConfig config, String path) {
         List<Bracket> brackets = new ArrayList<>();
         for (String id : config.getSection(path)) {
-            brackets.add(new Bracket(config.getDouble(path + "." + id + ".Threshold"), config.getDouble(path + "." + id + ".Percent")));
+            brackets.add(new Bracket(config.getDouble(path + "." + id + ".Threshold", Double.NaN),
+                config.getDouble(path + "." + id + ".Percent", Double.NaN)));
         }
         return brackets;
     }
