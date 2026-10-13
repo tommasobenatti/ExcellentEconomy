@@ -4,6 +4,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.Server;
 import org.bukkit.plugin.PluginManager;
 import org.mockito.MockedStatic;
+import io.papermc.paper.registry.RegistryAccess;
+import io.papermc.paper.registry.RegistryKey;
+import org.bukkit.Registry;
+import su.nightexpress.excellenteconomy.currency.tax.TransferTax;
 import su.nightexpress.excellenteconomy.api.currency.ExcellentCurrency;
 import su.nightexpress.excellenteconomy.user.CoinsUser;
 import su.nightexpress.excellenteconomy.user.UserBalance;
@@ -18,8 +22,13 @@ import static org.mockito.Mockito.*;
 public final class TestServer {
 
     public static final PluginManager PLUGINS = mock(PluginManager.class);
+    private static final MockedStatic<RegistryAccess> REGISTRIES = mockStatic(RegistryAccess.class);
 
     static {
+        RegistryAccess access = mock(RegistryAccess.class);
+        REGISTRIES.when(RegistryAccess::registryAccess).thenReturn(access);
+        when(access.getRegistry(any(Class.class))).thenAnswer(call -> mock(Registry.class));
+        when(access.getRegistry(any(RegistryKey.class))).thenAnswer(call -> mock(Registry.class));
         Server server = mock(Server.class);
         when(server.getLogger()).thenReturn(Logger.getLogger("ExcellentEconomyTests"));
         when(server.getName()).thenReturn("TestServer");
@@ -41,6 +50,7 @@ public final class TestServer {
         when(currency.hasPermission(any(org.bukkit.entity.Player.class))).thenReturn(true);
         when(currency.placeholders()).thenReturn(placeholder -> null);
         when(currency.isCommandEnabled(anyString())).thenReturn(true);
+        when(currency.getTransferTax()).thenReturn(TransferTax.NONE);
         when(currency.isDecimal()).thenReturn(true);
         when(currency.isTransferAllowed()).thenReturn(true);
         when(currency.isUnlimited()).thenReturn(true);
