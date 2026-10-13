@@ -159,6 +159,8 @@ public abstract class AbstractCurrency implements ExcellentCurrency, ConfigBacke
             Placeholders.URL_WIKI_TEXT
         ).read(config));
 
+        config.set("Format_Short", this.formatShort);
+
         this.setColumnName(ConfigValue.create("Column_Name", this.id,
             "Database column name where this currency will be saved."
         ).read(config));
