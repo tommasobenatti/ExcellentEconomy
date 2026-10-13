@@ -10,6 +10,10 @@ import su.nightexpress.nightcore.config.ConfigValue;
 
 public class Config {
 
+    public static final ConfigValue<Boolean> INTEGRATION_VAULT_UNLOCKED_ENABLED = ConfigValue.create("Integration.VaultUnlocked.Enabled",
+        true, "Enables the native UUID and multi-currency API of Vault Unlocked 2.20+."
+    );
+
     public static final ConfigValue<Boolean> INTEGRATION_VAULT_ENABLED = ConfigValue.create("Integration.Vault.Enabled",
         true,
         "Enables Vault integration."

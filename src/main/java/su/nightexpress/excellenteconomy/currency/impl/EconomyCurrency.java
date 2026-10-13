@@ -66,12 +66,12 @@ public class EconomyCurrency extends AbstractCurrency implements Economy {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return this.api.plugin().isEnabled();
     }
 
     @Override
     public int fractionalDigits() {
-        return -1;
+        return this.isDecimal() ? -1 : 0;
     }
 
     @Override
@@ -87,12 +87,13 @@ public class EconomyCurrency extends AbstractCurrency implements Economy {
 
     @Override
     public boolean createPlayerAccount(OfflinePlayer player) {
-        return false;
+        String name = player.getName();
+        return name != null && this.api.userManager().createAccount(player.getUniqueId(), name);
     }
 
     @Override
     public boolean createPlayerAccount(OfflinePlayer player, String worldName) {
-        return false;
+        return this.createPlayerAccount(player);
     }
 
     @Override
@@ -102,7 +103,7 @@ public class EconomyCurrency extends AbstractCurrency implements Economy {
 
     @Override
     public boolean createPlayerAccount(String playerName) {
-        return false;
+        return this.api.userManager().findByName(playerName).isPresent();
     }
 
 
@@ -113,7 +114,7 @@ public class EconomyCurrency extends AbstractCurrency implements Economy {
 
     @Override
     public double getBalance(OfflinePlayer player) {
-        CoinsUser user = this.api.userManager().getOrFetch(player.getUniqueId()).orElse(null);
+        CoinsUser user = this.api.userManager().findById(player.getUniqueId()).orElse(null);
         return this.getBalance(user);
     }
 
@@ -124,7 +125,7 @@ public class EconomyCurrency extends AbstractCurrency implements Economy {
 
     @Override
     public double getBalance(String playerName) {
-        CoinsUser user = this.api.userManager().getOrFetch(playerName).orElse(null);
+        CoinsUser user = this.api.userManager().findByName(playerName).orElse(null);
         return this.getBalance(user);
     }
 
@@ -140,7 +141,7 @@ public class EconomyCurrency extends AbstractCurrency implements Economy {
 
     @Override
     public boolean hasAccount(OfflinePlayer player) {
-        return this.api.userManager().getDataAccessor().isExists(player.getUniqueId());
+        return this.api.userManager().findById(player.getUniqueId()).isPresent();
     }
 
     @Override
@@ -150,7 +151,7 @@ public class EconomyCurrency extends AbstractCurrency implements Economy {
 
     @Override
     public boolean hasAccount(String playerName) {
-        return this.api.userManager().getDataAccessor().isExists(playerName);
+        return this.api.userManager().findByName(playerName).isPresent();
     }
 
 
@@ -161,7 +162,7 @@ public class EconomyCurrency extends AbstractCurrency implements Economy {
 
     @Override
     public boolean has(OfflinePlayer player, double amount) {
-        CoinsUser user = this.api.userManager().getOrFetch(player.getUniqueId()).orElse(null);
+        CoinsUser user = this.api.userManager().findById(player.getUniqueId()).orElse(null);
         return this.has(user, amount);
     }
 
@@ -172,12 +173,12 @@ public class EconomyCurrency extends AbstractCurrency implements Economy {
 
     @Override
     public boolean has(String playerName, double amount) {
-        CoinsUser user = this.api.userManager().getOrFetch(playerName).orElse(null);
+        CoinsUser user = this.api.userManager().findByName(playerName).orElse(null);
         return this.has(user, amount);
     }
 
     private boolean has(@Nullable CoinsUser user, double amount) {
-        return user != null && user.hasEnough(this, amount);
+        return su.nightexpress.excellenteconomy.user.BalanceTransactions.validAmount(amount) && user != null && user.hasEnough(this, amount);
     }
 
 
@@ -188,7 +189,7 @@ public class EconomyCurrency extends AbstractCurrency implements Economy {
 
     @Override
     public EconomyResponse depositPlayer(OfflinePlayer player, double amount) {
-        CoinsUser user = this.api.userManager().getOrFetch(player.getUniqueId()).orElse(null);
+        CoinsUser user = this.api.userManager().findById(player.getUniqueId()).orElse(null);
         return this.depositUser(user, amount);
     }
 
@@ -199,7 +200,7 @@ public class EconomyCurrency extends AbstractCurrency implements Economy {
 
     @Override
     public EconomyResponse depositPlayer(String playerName, double amount) {
-        CoinsUser user = this.api.userManager().getOrFetch(playerName).orElse(null);
+        CoinsUser user = this.api.userManager().findByName(playerName).orElse(null);
         return this.depositUser(user, amount);
     }
 
@@ -213,7 +214,7 @@ public class EconomyCurrency extends AbstractCurrency implements Economy {
         OperationResult result = this.api.currencyManager().give(this.operationContext(), user, this, amount);
         EconomyResponse.ResponseType type = result == OperationResult.SUCCESS ? EconomyResponse.ResponseType.SUCCESS : EconomyResponse.ResponseType.FAILURE;
 
-        return new EconomyResponse(amount, user.getBalance(this), type, null);
+        return new EconomyResponse(result.success() ? this.floorIfNeeded(amount) : 0D, user.getBalance(this), type, result.success() ? null : "Balance change was rejected");
     }
 
 
@@ -224,7 +225,7 @@ public class EconomyCurrency extends AbstractCurrency implements Economy {
 
     @Override
     public EconomyResponse withdrawPlayer(OfflinePlayer player, double amount) {
-        CoinsUser user = this.api.userManager().getOrFetch(player.getUniqueId()).orElse(null);
+        CoinsUser user = this.api.userManager().findById(player.getUniqueId()).orElse(null);
         return this.withdrawUser(user, amount);
     }
 
@@ -235,7 +236,7 @@ public class EconomyCurrency extends AbstractCurrency implements Economy {
 
     @Override
     public EconomyResponse withdrawPlayer(String playerName, double amount) {
-        CoinsUser user = this.api.userManager().getOrFetch(playerName).orElse(null);
+        CoinsUser user = this.api.userManager().findByName(playerName).orElse(null);
         return this.withdrawUser(user, amount);
     }
 
@@ -254,7 +255,7 @@ public class EconomyCurrency extends AbstractCurrency implements Economy {
         OperationResult result = this.api.currencyManager().remove(this.operationContext(), user, this, amount);
         EconomyResponse.ResponseType type = result == OperationResult.SUCCESS ? EconomyResponse.ResponseType.SUCCESS : EconomyResponse.ResponseType.FAILURE;
 
-        return new EconomyResponse(amount, user.getBalance(this), type, null);
+        return new EconomyResponse(result.success() ? this.floorIfNeeded(amount) : 0D, user.getBalance(this), type, result.success() ? null : "Balance change was rejected");
     }
 
     @NotNull

@@ -15,6 +15,8 @@ import su.nightexpress.excellenteconomy.data.DataHandler;
 import su.nightexpress.excellenteconomy.migration.MigrationManager;
 import su.nightexpress.excellenteconomy.tops.TopManager;
 import su.nightexpress.excellenteconomy.user.UserManager;
+import su.nightexpress.excellenteconomy.hook.VaultHooks;
+import su.nightexpress.excellenteconomy.hook.VaultUnlockedHook;
 import su.nightexpress.nightcore.NightPlugin;
 import su.nightexpress.nightcore.bridge.placeholder.PlaceholderProvider;
 import su.nightexpress.nightcore.bridge.placeholder.PlaceholderRegistry;
@@ -24,6 +26,7 @@ import su.nightexpress.nightcore.integration.placeholder.PAPI;
 public class EconomyPlugin extends NightPlugin {
 
     private ExcellentEconomyProvider api;
+    private Object vaultUnlockedProvider;
 
     CurrencyRegistry currencyRegistry;
     CommandManager   commandManager;
@@ -88,6 +91,16 @@ public class EconomyPlugin extends NightPlugin {
         this.getServer().getServicesManager().register(ExcellentEconomyAPI.class, this.api, this,
             ServicePriority.Normal);
 
+        if (Config.INTEGRATION_VAULT_UNLOCKED_ENABLED.get() && VaultHooks.hasAPI("net.milkbowl.vault2.economy.Economy")) {
+            if (VaultHooks.hasAPI("net.milkbowl.vault2.economy.MultiEconomyResponse") && this.currencyRegistry.hasPrimary()) {
+                this.vaultUnlockedProvider = VaultUnlockedHook.register(this.api);
+                this.info("Native Vault Unlocked multi-currency provider registered.");
+            }
+            else {
+                this.warn("Native Vault Unlocked integration requires API 2.20+ and a configured primary currency.");
+            }
+        }
+
         // Legacy %coinsengine_% placeholders for compatibility.
         if (PAPI.isPresent() && !this.legacyPlaceholders.isEmpty()) {
             PAPI.addExpansion(this, this.legacyPlaceholders, "coinsengine");
@@ -106,6 +119,11 @@ public class EconomyPlugin extends NightPlugin {
 
     @Override
     public void disable() {
+        if (this.vaultUnlockedProvider != null) {
+            this.getServer().getServicesManager().unregister(this.vaultUnlockedProvider);
+            this.vaultUnlockedProvider = null;
+        }
+        if (this.api != null) this.getServer().getServicesManager().unregister(this.api);
         if (this.commandManager != null) this.commandManager.shutdown();
         if (this.topManager != null) this.topManager.shutdown();
         if (this.migrationManager != null) this.migrationManager.shutdown();

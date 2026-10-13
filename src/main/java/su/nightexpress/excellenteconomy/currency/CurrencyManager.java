@@ -690,6 +690,18 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
         return OperationResult.SUCCESS;
     }
 
+    public OperationResult transfer(OperationContext context, CoinsUser sender, CoinsUser receiver, ExcellentCurrency currency, double amount) {
+        if (!this.assertOperationsEnabled(context)
+            || !BalanceTransactions.transfer(sender, currency, receiver, currency, amount, amount)) return OperationResult.FAILURE;
+        sender.markDirty();
+        receiver.markDirty();
+        if (this.logger != null && context.shouldNotifyLogger()) {
+            this.logger.addEntry(context, "[%s] %s transferred %s from %s to %s."
+                .formatted(currency.getId(), context.getExecutor().getName(), currency.format(amount), sender.getName(), receiver.getName()));
+        }
+        return OperationResult.SUCCESS;
+    }
+
     public boolean send(@NonNull Player sender, @NonNull CoinsUser targetUser, @NonNull ExcellentCurrency currency,
                         double rawAmount) {
         OperationContext context = OperationContext.of(sender);

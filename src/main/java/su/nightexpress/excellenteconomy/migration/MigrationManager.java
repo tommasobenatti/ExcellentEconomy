@@ -13,6 +13,7 @@ import su.nightexpress.excellenteconomy.config.Lang;
 import su.nightexpress.excellenteconomy.currency.CurrencyManager;
 import su.nightexpress.excellenteconomy.currency.CurrencyRegistry;
 import su.nightexpress.excellenteconomy.hook.HookPlugin;
+import su.nightexpress.excellenteconomy.hook.VaultHooks;
 import su.nightexpress.excellenteconomy.migration.command.MigrationCommand;
 import su.nightexpress.excellenteconomy.migration.impl.PlayerPointsMigrator;
 import su.nightexpress.excellenteconomy.user.CoinsUser;
@@ -118,7 +119,7 @@ public class MigrationManager extends SimpleManager<EconomyPlugin> {
             if (name == null) return;
 
             UUID uuid = player.getUniqueId();
-            CoinsUser user = this.userManager.getOrFetch(uuid).orElse(null);
+            CoinsUser user = this.userManager.findById(uuid).orElse(null);
             if (user == null) {
                 user = this.userManager.create(uuid, name);
                 this.userManager.getDataAccessor().insert(user);
