@@ -8,10 +8,33 @@ import su.nightexpress.excellenteconomy.user.UserManager;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.ArrayList;
+import org.bukkit.Bukkit;
+import su.nightexpress.nightcore.util.Version;
+import org.mockito.MockedStatic;
 
 import static org.mockito.Mockito.*;
 
 class SchedulingTest {
+
+    @Test
+    void foliaRunsInlineOnlyWhenTheCurrentRegionOwnsThePlayer() {
+        TestServer.initialize();
+        EconomyPlugin plugin = mock(EconomyPlugin.class, CALLS_REAL_METHODS);
+        Player player = mock(Player.class);
+        Runnable work = mock(Runnable.class);
+        doNothing().when(plugin).runTask(player, work);
+        try (MockedStatic<Version> platform = mockStatic(Version.class)) {
+            platform.when(Version::isFolia).thenReturn(true);
+            when(Bukkit.isOwnedByCurrentRegion(player)).thenReturn(false);
+            plugin.runForSender(player, work);
+            verify(plugin).runTask(player, work);
+            verifyNoInteractions(work);
+            when(Bukkit.isOwnedByCurrentRegion(player)).thenReturn(true);
+            plugin.runForSender(player, work);
+            verify(work).run();
+        }
+        finally { when(Bukkit.isOwnedByCurrentRegion(player)).thenReturn(false); }
+    }
 
     @Test
     void asyncLookupWaitsForTheSendersScheduledCallback() {
