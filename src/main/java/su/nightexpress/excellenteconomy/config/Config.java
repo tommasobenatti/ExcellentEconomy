@@ -7,8 +7,14 @@ import static su.nightexpress.nightcore.util.text.night.wrapper.TagWrappers.DARK
 import static su.nightexpress.nightcore.util.text.night.wrapper.TagWrappers.SOFT_YELLOW;
 
 import su.nightexpress.nightcore.config.ConfigValue;
+import su.nightexpress.nightcore.util.Version;
 
 public class Config {
+
+    public static boolean isTopMenuEnabled() {
+        // shortcut: NightCore 2.16.7 menus use the global scheduler, enable Folia GUI after entity-safe scheduling is provided.
+        return TOPS_USE_GUI.get() && !Version.isFolia();
+    }
 
     public static final ConfigValue<Boolean> INTEGRATION_VAULT_UNLOCKED_ENABLED = ConfigValue.create("Integration.VaultUnlocked.Enabled",
         true, "Enables the native UUID and multi-currency API of Vault Unlocked 2.20+."

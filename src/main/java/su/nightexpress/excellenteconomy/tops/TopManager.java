@@ -66,10 +66,13 @@ public class TopManager extends AbstractManager<EconomyPlugin> {
     protected void onLoad() {
         this.plugin.injectLang(TopLang.class);
 
-        if (Config.TOPS_USE_GUI.get()) {
+        if (Config.isTopMenuEnabled()) {
             Path path = this.plugin.dataPath().resolve(EconomyFiles.DIR_MENU).resolve(TopFiles.FILE_LEADERBOARD);
 
             this.topMenu = this.initMenu(new TopMenu(this.plugin, this), path);
+        }
+        else if (Config.TOPS_USE_GUI.get()) {
+            this.plugin.warn("Using text leaderboards on Folia: NightCore 2.16.7 inventory menus schedule clicks globally.");
         }
 
         this.loadCommands();
