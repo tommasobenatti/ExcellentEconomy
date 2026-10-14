@@ -3,7 +3,7 @@
 Name: Money
 Symbol: '$'
 Prefix: Money
-Command_Aliases: money
+Command_Aliases: money,eco
 Icon:
   Material: GOLD_NUGGET
 Format: '%currency_symbol%%amount%'

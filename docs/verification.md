@@ -125,3 +125,9 @@ Two new tests cover the optional override, fallback/removal, isolation from othe
 A configuration preview additionally renders six personal/other-player messages for money, coins, and souls through the real placeholder/message readers with mocked Bukkit items and PlaceholderAPI. It confirms that the advertisement appears only for the coins holder and that native Vault Unlocked's default currency is money. The money file, souls file, and main configuration are byte-for-byte unchanged from the previous prepared configuration; existing coins settings and all unrelated language values are preserved.
 
 The new JAR is required for the per-currency override. The configuration patch contains only four YAML files and instructions, with no database/userdata. No live server command routing or client rendering was tested.
+
+## Per-currency /eco alias — 2026-10-14
+
+No Java implementation changed. The existing `Command_Aliases` setting is independent for each currency file. The prepared money configuration now uses `money,eco`; coins and souls retain their existing aliases.
+
+An assertion-based preview loads all three configuration files and constructs their administrative command groups with the real `CommandManager` and mocked Bukkit/argument infrastructure. It verifies three separate alias groups and 15 currency-specific permission bindings for give, take, set, reset, and giveall. Only money's alias setting changes; all other money leaf values and the full coins/souls files are preserved. The two-entry ZIP contains money.yml and instructions only. No server registration/command conflict test was performed; no new build was required for a configuration-only alias.
