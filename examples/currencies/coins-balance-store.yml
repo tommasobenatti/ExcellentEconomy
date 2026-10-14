@@ -1,0 +1,5 @@
+# Merge this section into the existing coins.yml; keep its ID and column name.
+Balance_Display:
+  Own:
+  - '[prefix="false"]<lyellow>%currency_name%: <gold>%balance%</gold><white></white></lyellow>'
+  - <lyellow>ᴘᴜʀᴄʜᴀꜱᴇ ᴄᴏɪɴꜱ ᴀᴛ https://store.survival.net/</lyellow>

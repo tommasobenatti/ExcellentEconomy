@@ -1,0 +1,6 @@
+# Merge into the active lang file; this message is shared by all currencies.
+Currency:
+  Balance:
+    Display:
+      Own: '[prefix="false"]<lyellow>%currency_name%: <gold>%balance%</gold></lyellow>'
+      Others: '[prefix="false"]<lyellow>%player_name% — %currency_name%: <gold>%balance%</gold></lyellow>'

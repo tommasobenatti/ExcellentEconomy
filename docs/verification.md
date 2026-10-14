@@ -4,7 +4,7 @@ Date: **2026-10-13**. Starting revision: **5abcf03**, ExcellentEconomy 2.8.0. Sc
 
 ## Result
 
-**39 tests passed, zero failures/errors** on the current implementation against Paper API **26.3.build.178-stable**, using Java 25 and Gradle 9.4.1. The preceding 35-test implementation also passed builds against **26.1.2.build.74-stable** and **26.2.build.133-stable**; those compatibility builds were not repeated for the subsequent configuration-only correction. These are compilation and component tests with mocked Bukkit/persistence, not live Minecraft-server tests.
+**41 tests passed, zero failures/errors** on the current implementation against Paper API **26.3.build.178-stable**, using Java 25 and Gradle 9.4.1. The preceding 35-test implementation also passed builds against **26.1.2.build.74-stable** and **26.2.build.133-stable**; those compatibility builds were not repeated for the subsequent configuration and personal balance-message changes. These are compilation and component tests with mocked Bukkit/persistence, not live Minecraft-server tests.
 
 The initial unchanged build failed to resolve `su.nightexpress.nightcore:main:2.15.1`. Switching to the published **2.16.7** restored the build and supplied the Folia scheduler bridge and Minecraft 26.3 recognition.
 
@@ -38,6 +38,7 @@ All three compatibility runs pass. No standalone lint task is configured. `git d
 | Folia selects the text leaderboard with the current NightCore menu implementation | `TopPlatformTest` | Platform configuration / PASS |
 | Maintenance starts only once and cannot reopen operations after shutdown starts | `CurrencyManagerTest` | Component / PASS |
 | Existing two-currency settings, storage prefix/file, plugin/command aliases, custom messages, and leaderboard settings survive loading; obsolete compact suffix migration is saved and idempotent | `LegacyConfigurationTest` | Configuration component / PASS |
+| A coins-specific personal balance message shows its store text without leaking into money, souls, other-player checks, or amount formatting; removing it restores the shared message | `CurrencyBalanceDisplayTest` | Configuration/manager component / PASS |
 
 ### Supplied configuration archive
 
@@ -90,7 +91,7 @@ JaCoCo **0.8.15** reports:
 | Scope | Line coverage | Branch coverage |
 | --- | ---: | ---: |
 | `BalanceTransactions` plus `TransferTax` and its nested types | **87/87 (100%)** | **71/88 (80.7%)** |
-| Whole plugin after configuration regressions | **963/2600 (37.0%)** | **227/700 (32.4%)** |
+| Whole plugin after balance-message regressions | **976/2605 (37.5%)** | **234/704 (33.2%)** |
 
 The coverage target is met for the new transaction/tax core. Whole-project coverage remains below 80%; much of the existing GUI, migrations, database infrastructure, placeholders, lifecycle, and native API compatibility boilerplate is not exercised by this suite. No whole-plugin coverage claim is made.
 
@@ -114,3 +115,13 @@ The prepared configuration was loaded through the real NightCore/ExcellentEconom
 The deliverable ZIP contains **16 YAML files plus instructions**, exclusively for ExcellentEconomy and EconomyBridge. ZIP integrity and an explicit no-database/no-userdata file inventory were checked; the supplied archive's SHA-256 is unchanged. Private server configuration is kept in ignored output directories; only the reusable currency preset and documentation are committed.
 
 Installing the preset lets the plugin's normal currency registration create its new `money` column with the configured initial value. That normal startup behavior is not an Essentials balance import. Essentials permission grants, payment preferences, warps, spawn, kits, and other features are outside this configuration-only replacement. No live server startup was performed.
+
+## Money / coins / souls balance display — 2026-10-14
+
+The supplied screenshot matches the two lines in the existing shared `Currency.Balance.Display.Own`: a hardcoded coins label and store advertisement. This message was reused even for the primary money currency. The prepared language file now uses `%currency_name%`; the confirmed store URL is moved to the coins-only optional `Balance_Display.Own` configuration. Existing integrations and the selected primary currency remain unchanged.
+
+Two new tests cover the optional override, fallback/removal, isolation from other currencies and amount formatting, and routing of personal versus other-player balance checks. Commit **c307b0c** captures a missing-implementation compile RED; **562c903** implements the contract and passes the full suite/build GREEN. A Mockito spy verification fixture error was corrected separately from the feature logic and is not counted as business RED evidence.
+
+A configuration preview additionally renders six personal/other-player messages for money, coins, and souls through the real placeholder/message readers with mocked Bukkit items and PlaceholderAPI. It confirms that the advertisement appears only for the coins holder and that native Vault Unlocked's default currency is money. The money file, souls file, and main configuration are byte-for-byte unchanged from the previous prepared configuration; existing coins settings and all unrelated language values are preserved.
+
+The new JAR is required for the per-currency override. The configuration patch contains only four YAML files and instructions, with no database/userdata. No live server command routing or client rendering was tested.
