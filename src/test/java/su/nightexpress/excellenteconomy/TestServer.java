@@ -56,6 +56,7 @@ public final class TestServer {
         when(currency.placeholders()).thenReturn(placeholder -> null);
         when(currency.isCommandEnabled(anyString())).thenReturn(true);
         when(currency.getTransferTax()).thenReturn(TransferTax.NONE);
+        when(currency.getBalanceDisplayOwn(any())).thenAnswer(call -> call.getArgument(0));
         when(currency.isDecimal()).thenReturn(true);
         when(currency.isTransferAllowed()).thenReturn(true);
         when(currency.isUnlimited()).thenReturn(true);

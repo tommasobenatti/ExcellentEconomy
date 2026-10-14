@@ -434,7 +434,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
     public void showBalance(@NonNull CommandSender sender, @NonNull CoinsUser user,
                             @NonNull ExcellentCurrency currency) {
         this.plugin.runForSender(sender, () -> currency.sendPrefixed((user.isHolder(
-            sender) ? Lang.CURRENCY_BALANCE_DISPLAY_OWN : Lang.CURRENCY_BALANCE_DISPLAY_OTHERS), sender,
+            sender) ? currency.getBalanceDisplayOwn(Lang.CURRENCY_BALANCE_DISPLAY_OWN) : Lang.CURRENCY_BALANCE_DISPLAY_OTHERS), sender,
             builder -> builder
                 .with(CommonPlaceholders.PLAYER_NAME, user::getName)
                 .with(EconomyPlaceholders.GENERIC_BALANCE, () -> currency.format(user.getBalance(currency)))

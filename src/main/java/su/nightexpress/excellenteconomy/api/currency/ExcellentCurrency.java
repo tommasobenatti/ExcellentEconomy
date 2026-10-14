@@ -35,6 +35,10 @@ public interface ExcellentCurrency extends PlaceholderResolvable {
         return TransferTax.NONE;
     }
 
+    default @NonNull MessageLocale getBalanceDisplayOwn(@NonNull MessageLocale fallback) {
+        return fallback;
+    }
+
     boolean isPrimary();
 
     boolean isUnlimited();

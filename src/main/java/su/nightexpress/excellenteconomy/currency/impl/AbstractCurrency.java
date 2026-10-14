@@ -70,6 +70,7 @@ public abstract class AbstractCurrency implements ExcellentCurrency, ConfigBacke
     protected String messagePrefix;
     private final Set<String> disabledCommands = new HashSet<>();
     private TransferTax transferTax = TransferTax.NONE;
+    private MessageLocale balanceDisplayOwn;
 
     protected AbstractCurrency(@NonNull Path path, @NonNull String id) {
         this.path = path;
@@ -106,6 +107,10 @@ public abstract class AbstractCurrency implements ExcellentCurrency, ConfigBacke
     }
 
     private void load(@NonNull FileConfig config) throws IllegalStateException {
+        this.balanceDisplayOwn = config.contains("Balance_Display.Own")
+            ? new MessageLocale("Balance_Display.Own", LangMessage.read(config, "Balance_Display.Own"))
+            : null;
+
         this.setName(ConfigValue.create("Name", StringUtil.capitalizeUnderscored(this.id),
             "Currency display name.",
             Placeholders.URL_WIKI_TEXT
@@ -301,6 +306,11 @@ public abstract class AbstractCurrency implements ExcellentCurrency, ConfigBacke
     @Override
     public TransferTax getTransferTax() {
         return this.transferTax;
+    }
+
+    @Override
+    public @NonNull MessageLocale getBalanceDisplayOwn(@NonNull MessageLocale fallback) {
+        return this.balanceDisplayOwn == null ? fallback : this.balanceDisplayOwn;
     }
 
     @Override

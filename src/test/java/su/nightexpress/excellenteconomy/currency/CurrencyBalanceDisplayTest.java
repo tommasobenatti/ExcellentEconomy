@@ -83,8 +83,9 @@ class CurrencyBalanceDisplayTest {
             doAnswer(call -> { ((Runnable) call.getArgument(1)).run(); return null; })
                 .when(plugin).runForSender(any(), any(Runnable.class));
             CurrencyManager manager = new CurrencyManager(plugin, new CurrencyRegistry(), mock(CommandManager.class), mock(DataHandler.class), mock(UserManager.class));
+            MessageLocale ownMessage = coins.getBalanceDisplayOwn(Lang.CURRENCY_BALANCE_DISPLAY_OWN);
             manager.showBalance(owner, user, coins);
-            verify(coins).sendPrefixed(eq(coins.getBalanceDisplayOwn(Lang.CURRENCY_BALANCE_DISPLAY_OWN)), eq(owner), any(Consumer.class));
+            verify(coins).sendPrefixed(eq(ownMessage), eq(owner), any(Consumer.class));
             manager.showBalance(other, user, coins);
             verify(coins).sendPrefixed(eq(Lang.CURRENCY_BALANCE_DISPLAY_OTHERS), eq(other), any(Consumer.class));
         }
