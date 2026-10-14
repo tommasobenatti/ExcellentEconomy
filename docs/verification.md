@@ -104,3 +104,13 @@ Generated reports: `build/reports/tests/test/index.html`, `build/reports/jacoco/
 - The balance lock is local to one server process. Existing NightCore caching and cross-server synchronization are retained, with no distributed transaction guarantee.
 - Shared/bank accounts, arbitrary-precision storage, and native `AsyncEconomy` are not advertised. UUID personal accounts, the synchronous native provider, and the existing asynchronous ExcellentEconomy API are supported.
 - No upstream issue/PR was modified, no pull request was opened, and no commit was pushed.
+
+## Configuration-only Essentials replacement — 2026-10-14
+
+Scope was explicitly narrowed to configuration files: no Essentials balances, userdata, or database were copied or migrated. The new `money` preset uses starting balance 1000, dollar prefix, decimal amounts, maximum 10,000,000,000,000, payments enabled, and taxes/exchanges disabled. The payment minimum is 0.1 because the existing decimal command parser rejects smaller amounts; the zero balance floor remains unchanged.
+
+The prepared configuration was loaded through the real NightCore/ExcellentEconomy configuration readers with mocked Bukkit item construction. Assertions verify the primary currency/settings, existing YAML leaf-value preservation (apart from the already-supported compact-format normalization), and byte-for-byte preservation of all five EconomyBridge configuration files. **All four `LegacyConfigurationTest` tests pass against the prepared files.** No Java implementation changed, so the previous full-suite/build evidence remains the implementation baseline.
+
+The deliverable ZIP contains **16 YAML files plus instructions**, exclusively for ExcellentEconomy and EconomyBridge. ZIP integrity and an explicit no-database/no-userdata file inventory were checked; the supplied archive's SHA-256 is unchanged. Private server configuration is kept in ignored output directories; only the reusable currency preset and documentation are committed.
+
+Installing the preset lets the plugin's normal currency registration create its new `money` column with the configured initial value. That normal startup behavior is not an Essentials balance import. Essentials permission grants, payment preferences, warps, spawn, kits, and other features are outside this configuration-only replacement. No live server startup was performed.

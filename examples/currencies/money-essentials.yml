@@ -1,0 +1,33 @@
+# Main currency for an Essentials economy configuration replacement.
+# Existing Essentials balances are not imported by this configuration.
+Name: Money
+Symbol: '$'
+Prefix: Money
+Command_Aliases: money
+Icon:
+  Material: GOLD_NUGGET
+Format: '%currency_symbol%%amount%'
+Format_Short: '%currency_symbol%%amount%'
+Column_Name: money
+Synchronized: false
+Decimal: true
+Permission_Required: false
+Commands:
+  Disabled: ''
+Transfer_Allowed: true
+# The current decimal command parser requires at least 0.1.
+Transfer_Min_Amount: 0.1
+Transfer_Tax:
+  Enabled: false
+  Payer: SENDER
+  Brackets:
+    base:
+      Threshold: 0.0
+      Percent: 0.0
+Start_Value: 1000.0
+Max_Value: 10000000000000.0
+Exchange:
+  Allowed: false
+  Rates: {}
+Leaderboard:
+  Enabled: true

@@ -64,6 +64,16 @@ Existing `Children.Aliases`/`Dedicated` sections are read by the command-definit
 
 Older `General.Amount_Shortcuts` and `Economy.Command_Shortcuts` sections remain in the file for preservation but are not read by the current upstream architecture. Amount shortcuts come from NightCore's `Number.Shortcut_List`; the supplied `k`, `m`, and `b` values match its defaults. Standalone command switches come from `commands.yml`. This check does not change another plugin's NightCore configuration.
 
+## Replace Essentials economy settings without importing balances
+
+Use [`examples/currencies/money-essentials.yml`](examples/currencies/money-essentials.yml) as `currencies/money.yml` and select `money` in `Integration.Vault.EconomyCurrency`. Enable the chosen Vault integrations. This preset keeps Essentials' supplied starting balance **1000**, **$** prefix, decimal amounts, and maximum balance **10,000,000,000,000**. Transfers are enabled; taxes and currency exchanges are disabled. Existing `coins` and `souls` configurations stay independent.
+
+The preset uses a payment minimum of **0.1**, matching the fork's existing decimal command parser; Essentials' **0.001** command minimum cannot be reproduced through configuration alone. ExcellentEconomy's existing zero balance floor also replaces Essentials' **-10000** minimum. The supplied EconomyBridge `vault` configuration can be retained when ExcellentEconomy becomes the Vault provider.
+
+This is a **configuration-only** replacement: it does not import Essentials balances or payment preferences. When the plugin registers the new currency, its usual database initialization creates the `money` column with the configured starting value. Existing database files and table prefixes should remain in place. Grant the corresponding `excellenteconomy.command.money.*` action permissions through your permission manager; Essentials permission nodes do not grant ExcellentEconomy commands.
+
+Remove Essentials only after any other features you use, such as warps, spawn commands, kits, and placeholders, have replacements. Those features are outside this economy configuration preset.
+
 ## Vault and Vault Unlocked
 
 In `config.yml`:
