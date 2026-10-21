@@ -4,7 +4,7 @@
 
 A focused fork of [NightExpress's ExcellentEconomy](https://github.com/nulli0n/ExcellentEconomy), based on **2.8.0**, with native **Vault Unlocked**, per-currency command permissions, progressive transfer taxes, and **Folia-aware scheduling**. The plugin name, existing currency files, SQLite/MySQL storage, and public ExcellentEconomy API are retained.
 
-Current fork version: **2.8.1-mcexp.1**.
+Current fork version: **2.8.1-mcexp.2**.
 
 ## What changed
 
@@ -223,7 +223,7 @@ Statuses checked on **2026-10-13**; these changes are local to this fork and do 
 ./gradlew clean test jacocoTestReport build
 ```
 
-The JAR is written to `build/libs/ExcellentEconomy-2.8.1-mcexp.1.jar`. NightCore and Vault APIs remain external dependencies.
+The JAR is written to `build/libs/ExcellentEconomy-2.8.1-mcexp.2.jar`. NightCore and Vault APIs remain external dependencies.
 
 To repeat the API compatibility checks:
 

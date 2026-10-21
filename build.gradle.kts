@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "su.nightexpress.excellenteconomy"
-version = "2.8.1-mcexp.1"
+version = "2.8.1-mcexp.2"
 
 java {
     toolchain {
