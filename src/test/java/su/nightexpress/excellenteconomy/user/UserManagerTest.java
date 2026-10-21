@@ -2,6 +2,7 @@ package su.nightexpress.excellenteconomy.user;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.command.CommandSender;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import su.nightexpress.excellenteconomy.EconomyPlugin;
@@ -21,6 +22,32 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class UserManagerTest {
+
+    @Test
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    void missingRewardTargetIsLoggedWithoutCreatingAnAccountOrRetrying() throws Exception {
+        TestServer.initialize();
+        EconomyPlugin plugin = mock(EconomyPlugin.class);
+        CommandSender console = mock(CommandSender.class);
+        when(console.getName()).thenReturn("CONSOLE");
+        doAnswer(call -> { ((Runnable) call.getArgument(1)).run(); return null; })
+            .when(plugin).runForSender(eq(console), any(Runnable.class));
+        try (MockedConstruction<DefaultUserDataAccessor> accessors = mockConstruction(DefaultUserDataAccessor.class, (accessor, context) -> {
+            when(accessor.loadByName(anyString())).thenReturn(Optional.empty());
+        })) {
+            UserManager users = new UserManager(plugin, new CurrencyRegistry(), null);
+            CountDownLatch completed = new CountDownLatch(1);
+            var result = new java.util.concurrent.atomic.AtomicReference<Optional<CoinsUser>>();
+            String target = "UnknownMob\nname";
+            users.withUser(console, target, user -> { result.set(user); completed.countDown(); });
+            assertTrue(completed.await(5, TimeUnit.SECONDS));
+            assertTrue(result.get().isEmpty());
+            verify(plugin).warn("Economy account not found: target=\"UnknownMob\\nname\", sender=\"CONSOLE\"");
+            verify(accessors.constructed().getFirst(), times(1)).loadByName(target);
+            verify(accessors.constructed().getFirst(), never()).insert(any(CoinsUser.class));
+            verify(accessors.constructed().getFirst(), never()).update(any(CoinsUser.class));
+        }
+    }
 
     @Test
     @SuppressWarnings({"rawtypes", "unchecked"})
