@@ -97,6 +97,8 @@ Native account support is for personal UUID/player accounts. Account creation is
 
 ## Currency commands and permissions
 
+If a reward command reports that a player was not found, build **mcexp.2** also logs the exact lookup target and sender with control characters escaped. This distinguishes an unresolved/non-player MythicMobs placeholder from a real player account lookup failure. Missing accounts are not created and failed rewards are not retried automatically. For command drops, `<trigger.name>` can describe a non-player killer; use a player-only trigger condition on the relevant reward table. See [the Dungeons investigation](docs/dungeons-reward-targets.md) for the verified evidence and its limits.
+
 Currency settings live in `plugins/ExcellentEconomy/currencies/<id>.yml`. For example:
 
 ```yaml
