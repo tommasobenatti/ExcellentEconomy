@@ -1,10 +1,10 @@
-# Verification — 2.8.1-mcexp.2
+# Verification — 2.8.1-mcexp.1
 
 Date: **2026-10-13**. Starting revision: **5abcf03**, ExcellentEconomy 2.8.0. Scope was derived from the user's request and upstream references; no separate plan file was supplied.
 
 ## Result
 
-**42 tests passed, zero failures/errors** on the current implementation against Paper API **26.3.build.178-stable**, using Java 25 and Gradle 9.4.1. The preceding 35-test implementation also passed builds against **26.1.2.build.74-stable** and **26.2.build.133-stable**; those compatibility builds were not repeated for the subsequent configuration and personal balance-message changes. These are compilation and component tests with mocked Bukkit/persistence, not live Minecraft-server tests.
+**41 tests passed, zero failures/errors** on the current implementation against Paper API **26.3.build.178-stable**, using Java 25 and Gradle 9.4.1. The preceding 35-test implementation also passed builds against **26.1.2.build.74-stable** and **26.2.build.133-stable**; those compatibility builds were not repeated for the subsequent configuration and personal balance-message changes. These are compilation and component tests with mocked Bukkit/persistence, not live Minecraft-server tests.
 
 The initial unchanged build failed to resolve `su.nightexpress.nightcore:main:2.15.1`. Switching to the published **2.16.7** restored the build and supplied the Folia scheduler bridge and Minecraft 26.3 recognition.
 
@@ -91,7 +91,7 @@ JaCoCo **0.8.15** reports:
 | Scope | Line coverage | Branch coverage |
 | --- | ---: | ---: |
 | `BalanceTransactions` plus `TransferTax` and its nested types | **87/87 (100%)** | **71/88 (80.7%)** |
-| Whole plugin after reward-target diagnostics | **982/2610 (37.6%)** | **235/706 (33.3%)** |
+| Whole plugin after balance-message regressions | **976/2605 (37.5%)** | **234/704 (33.2%)** |
 
 The coverage target is met for the new transaction/tax core. Whole-project coverage remains below 80%; much of the existing GUI, migrations, database infrastructure, placeholders, lifecycle, and native API compatibility boilerplate is not exercised by this suite. No whole-plugin coverage claim is made.
 
@@ -131,7 +131,3 @@ The new JAR is required for the per-currency override. The configuration patch c
 No Java implementation changed. The existing `Command_Aliases` setting is independent for each currency file. The prepared money configuration now uses `money,eco`; coins and souls retain their existing aliases.
 
 An assertion-based preview loads all three configuration files and constructs their administrative command groups with the real `CommandManager` and mocked Bukkit/argument infrastructure. It verifies three separate alias groups and 15 currency-specific permission bindings for give, take, set, reset, and giveall. Only money's alias setting changes; all other money leaf values and the full coins/souls files are preserved. The two-entry ZIP contains money.yml and instructions only. No server registration/command conflict test was performed; no new build was required for a configuration-only alias.
-
-## Dungeons reward-target diagnostics — 2026-10-21
-
-See [the investigation](dungeons-reward-targets.md) for verified read-only SFTP evidence, the non-player-trigger hypothesis and its limits, RED/GREEN commits, and the prepared player-only MythicMobs configurations. The new regression proves that missing targets are reported safely without retries or account insert/update. Full suite: **42 passing tests**; `test jacocoTestReport build` succeeds against the default Paper 26.3 API. No production file, balance, or database was modified. YAML structure checks cover fourteen reward references and seven guarded tables, but no live reward test has been run.

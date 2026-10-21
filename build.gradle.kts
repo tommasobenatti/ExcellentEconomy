@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "su.nightexpress.excellenteconomy"
-version = "2.8.1-mcexp.2"
+version = "2.8.1-mcexp.1"
 
 java {
     toolchain {
@@ -62,7 +62,6 @@ tasks {
     }
 
     processResources {
-        inputs.property("pluginVersion", project.version)
         // Replicates maven <filtering>true</filtering> for plugin.yml
         // Replaces ${version} with the project version.
         filesMatching("*plugin.yml") {

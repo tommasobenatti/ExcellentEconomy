@@ -4,7 +4,7 @@
 
 A focused fork of [NightExpress's ExcellentEconomy](https://github.com/nulli0n/ExcellentEconomy), based on **2.8.0**, with native **Vault Unlocked**, per-currency command permissions, progressive transfer taxes, and **Folia-aware scheduling**. The plugin name, existing currency files, SQLite/MySQL storage, and public ExcellentEconomy API are retained.
 
-Current fork version: **2.8.1-mcexp.2**.
+Current fork version: **2.8.1-mcexp.1**.
 
 ## What changed
 
@@ -96,8 +96,6 @@ Native account support is for personal UUID/player accounts. Account creation is
 `BigDecimal` API requests are checked and translated to the plugin's existing **double-backed** balances. This is not an arbitrary-precision storage migration. Whole-number currencies round operation amounts down and return the normalized amount in their response.
 
 ## Currency commands and permissions
-
-If a reward command reports that a player was not found, build **mcexp.2** also logs the exact lookup target and sender with control characters escaped. This distinguishes an unresolved/non-player MythicMobs placeholder from a real player account lookup failure. Missing accounts are not created and failed rewards are not retried automatically. For command drops, `<trigger.name>` can describe a non-player killer; use a player-only trigger condition on the relevant reward table. See [the Dungeons investigation](docs/dungeons-reward-targets.md) for the verified evidence and its limits.
 
 Currency settings live in `plugins/ExcellentEconomy/currencies/<id>.yml`. For example:
 
@@ -225,7 +223,7 @@ Statuses checked on **2026-10-13**; these changes are local to this fork and do 
 ./gradlew clean test jacocoTestReport build
 ```
 
-The JAR is written to `build/libs/ExcellentEconomy-2.8.1-mcexp.2.jar`. NightCore and Vault APIs remain external dependencies.
+The JAR is written to `build/libs/ExcellentEconomy-2.8.1-mcexp.1.jar`. NightCore and Vault APIs remain external dependencies.
 
 To repeat the API compatibility checks:
 

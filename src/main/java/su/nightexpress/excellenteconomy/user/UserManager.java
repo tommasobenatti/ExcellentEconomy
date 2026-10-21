@@ -72,13 +72,7 @@ public class UserManager extends AbstractUserManager<EconomyPlugin, CoinsUser> {
     }
 
     public void withUser(CommandSender sender, String name, Consumer<Optional<CoinsUser>> action) {
-        this.findByNameAsync(name).thenAccept(user -> {
-            if (user.isEmpty()) {
-                this.plugin.warn("Economy account not found: target=" + DataHandler.GSON.toJson(name)
-                    + ", sender=" + DataHandler.GSON.toJson(sender.getName()));
-            }
-            this.plugin.runForSender(sender, () -> action.accept(user));
-        })
+        this.findByNameAsync(name).thenAccept(user -> this.plugin.runForSender(sender, () -> action.accept(user)))
             .exceptionally(exception -> {
                 this.plugin.error("Could not load economy account '" + name + "': " + exception.getMessage());
                 this.plugin.runForSender(sender, () -> Lang.USER_LOOKUP_FAILED.message().send(sender));
