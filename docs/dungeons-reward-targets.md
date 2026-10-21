@@ -24,7 +24,7 @@ Economy account not found: target="Skeleton", sender="CONSOLE"
 
 This is an example, not the observed target at 19:37:42. If a future failure identifies the real player, investigate that account/database lookup instead of assuming the non-player-trigger hypothesis.
 
-`UserManagerTest.missingRewardTargetIsLoggedWithoutCreatingAnAccountOrRetrying` was observed failing before the logging change (**8ea39b4**, RED). The implementation passes that regression and the full **42-test** suite/build (**29b3920**, GREEN). The test also checks escaped newlines, one lookup, and no account insert/update. A real MythicMobs server execution was not reproduced.
+`UserManagerTest.missingRewardTargetIsLoggedWithoutCreatingAnAccountOrRetrying` was observed failing before the logging change (**8ea39b4**, RED). The implementation passes that regression and the full **42-test** suite/build (**29b3920**, GREEN). The test also checks escaped newlines, one lookup, and no account insert/update. A real MythicMobs server execution was not reproduced. The release check also caught stale plugin descriptors in an incremental version change; `processResources` now declares the version as an input. Both packaged descriptors were checked to report mcexp.2 after rebuilding.
 
 ## Prepared player-only reward configuration
 

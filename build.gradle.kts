@@ -62,6 +62,7 @@ tasks {
     }
 
     processResources {
+        inputs.property("pluginVersion", project.version)
         // Replicates maven <filtering>true</filtering> for plugin.yml
         // Replaces ${version} with the project version.
         filesMatching("*plugin.yml") {
