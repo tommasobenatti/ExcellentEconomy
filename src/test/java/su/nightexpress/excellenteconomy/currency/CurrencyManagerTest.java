@@ -39,7 +39,7 @@ class CurrencyManagerTest {
         when(sender.hasPermission(anyString())).thenReturn(true);
         when(sender.hasPermission(Perms.taxBypass(currency))).thenReturn(false);
         UserManager users = mock(UserManager.class);
-        when(users.getOrFetch(sender)).thenReturn(senderUser);
+        when(users.requireLoaded(sender)).thenReturn(senderUser);
         manager = new CurrencyManager(mock(EconomyPlugin.class), new CurrencyRegistry(), mock(CommandManager.class), mock(DataHandler.class), users);
     }
 

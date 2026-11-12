@@ -90,26 +90,24 @@ public final class VaultUnlockedEconomy implements Economy {
         ExcellentCurrency currency = this.api.currencyRegistry().getById(currencyId);
         CoinsUser user = this.api.userManager().findById(accountID).orElse(null);
         if (currency == null || user == null || !valid(amount)) return failure(BigDecimal.ZERO, "Invalid account, currency, or amount");
-        synchronized (UserBalance.class) {
-            double value = currency.floorIfNeeded(amount.doubleValue());
-            double current = user.getBalance(currency);
-            double next = switch (operation) {
-                case "deposit" -> current + value;
-                case "withdraw" -> current - value;
-                default -> value;
-            };
-            if (!this.api.currencyManager().canPerformOperations() || !BalanceTransactions.validAmount(next)
-                || (!operation.equals("withdraw") && !currency.isUnderLimit(next)))
-                return failure(BigDecimal.valueOf(current), "Insufficient funds, balance limit, or disabled operations");
-            boolean success = preview || switch (operation) {
-                case "deposit" -> this.api.currencyManager().give(this.context(pluginName), user, currency, value).success();
-                case "withdraw" -> this.api.currencyManager().remove(this.context(pluginName), user, currency, value).success();
-                default -> this.api.currencyManager().set(this.context(pluginName), user, currency, value).success();
-            };
-            if (!success) return failure(BigDecimal.valueOf(user.getBalance(currency)), "Balance change was rejected");
-            return new EconomyResponse(BigDecimal.valueOf(value), BigDecimal.valueOf(preview ? current : user.getBalance(currency)),
-                EconomyResponse.ResponseType.SUCCESS, "");
-        }
+        double value = currency.floorIfNeeded(amount.doubleValue());
+        double current = user.getBalance(currency);
+        double next = switch (operation) {
+            case "deposit" -> current + value;
+            case "withdraw" -> current - value;
+            default -> value;
+        };
+        if (!this.api.currencyManager().canPerformOperations() || (preview && (!BalanceTransactions.validAmount(next)
+            || (!operation.equals("withdraw") && !currency.isUnderLimit(next)))))
+            return failure(BigDecimal.valueOf(current), "Insufficient funds, balance limit, or disabled operations");
+        boolean success = preview || switch (operation) {
+            case "deposit" -> this.api.currencyManager().give(this.context(pluginName), user, currency, value).success();
+            case "withdraw" -> this.api.currencyManager().remove(this.context(pluginName), user, currency, value).success();
+            default -> this.api.currencyManager().set(this.context(pluginName), user, currency, value).success();
+        };
+        if (!success) return failure(BigDecimal.valueOf(user.getBalance(currency)), "Balance change was rejected");
+        return new EconomyResponse(BigDecimal.valueOf(value), BigDecimal.valueOf(preview ? current : user.getBalance(currency)),
+            EconomyResponse.ResponseType.SUCCESS, "");
     }
 
     private static EconomyResponse failure(BigDecimal balance, String message) {
@@ -148,15 +146,13 @@ public final class VaultUnlockedEconomy implements Economy {
         CoinsUser receiver = this.api.userManager().findById(to).orElse(null);
         if (currency == null || sender == null || receiver == null || !valid(amount))
             return new MultiEconomyResponse(BigDecimal.ZERO, EconomyResponse.ResponseType.FAILURE, "Invalid account, currency, or amount");
-        synchronized (UserBalance.class) {
-            double value = currency.floorIfNeeded(amount.doubleValue());
-            if (!this.api.currencyManager().transfer(this.context(pluginName), sender, receiver, currency, value).success())
-                return new MultiEconomyResponse(BigDecimal.ZERO, EconomyResponse.ResponseType.FAILURE, "Transfer was rejected");
-            MultiEconomyResponse response = new MultiEconomyResponse(BigDecimal.valueOf(value), EconomyResponse.ResponseType.SUCCESS, "");
-            response.addBalance(from, BigDecimal.valueOf(sender.getBalance(currency)));
-            response.addBalance(to, BigDecimal.valueOf(receiver.getBalance(currency)));
-            return response;
-        }
+        double value = currency.floorIfNeeded(amount.doubleValue());
+        if (!this.api.currencyManager().transfer(this.context(pluginName), sender, receiver, currency, value).success())
+            return new MultiEconomyResponse(BigDecimal.ZERO, EconomyResponse.ResponseType.FAILURE, "Transfer was rejected");
+        MultiEconomyResponse response = new MultiEconomyResponse(BigDecimal.valueOf(value), EconomyResponse.ResponseType.SUCCESS, "");
+        response.addBalance(from, BigDecimal.valueOf(sender.getBalance(currency)));
+        response.addBalance(to, BigDecimal.valueOf(receiver.getBalance(currency)));
+        return response;
     }
 
     @Override public boolean createSharedAccount(String pluginName, UUID accountID, String name, UUID owner) { return false; }

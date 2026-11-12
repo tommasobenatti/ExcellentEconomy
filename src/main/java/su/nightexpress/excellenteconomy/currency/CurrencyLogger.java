@@ -67,6 +67,7 @@ public class CurrencyLogger {
     }
 
     public void addEntry(@NotNull OperationContext context, @NotNull String log) {
+        if(su.nightexpress.excellenteconomy.data.postgres.AccountTransaction.defer(() -> addEntry(context,log))) return;
         String stripped = NightMessage.stripTags(log);
 
         if (this.logToConsole && context.shouldNotify(NotificationTarget.CONSOLE_LOGGER)) {

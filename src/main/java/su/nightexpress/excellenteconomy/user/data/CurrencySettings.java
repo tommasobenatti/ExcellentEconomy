@@ -6,6 +6,8 @@ import su.nightexpress.excellenteconomy.api.currency.ExcellentCurrency;
 public class CurrencySettings {
 
     private volatile boolean paymentsEnabled;
+    private Runnable onChange;
+    public void onChange(Runnable listener) { this.onChange=listener; }
 
     public CurrencySettings(boolean paymentsEnabled) {
         this.setPaymentsEnabled(paymentsEnabled);
@@ -21,6 +23,10 @@ public class CurrencySettings {
     }
 
     public void setPaymentsEnabled(boolean paymentsEnabled) {
-        this.paymentsEnabled = paymentsEnabled;
+        synchronized(su.nightexpress.excellenteconomy.user.UserBalance.class) {
+            boolean changed=this.paymentsEnabled!=paymentsEnabled;
+            this.paymentsEnabled=paymentsEnabled;
+            if(changed && onChange!=null) onChange.run();
+        }
     }
 }

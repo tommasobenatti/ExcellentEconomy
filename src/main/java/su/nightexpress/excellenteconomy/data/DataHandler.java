@@ -1,151 +1,84 @@
 package su.nightexpress.excellenteconomy.data;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import org.jspecify.annotations.NonNull;
-
+import com.google.gson.*;
 import su.nightexpress.excellenteconomy.EconomyPlugin;
 import su.nightexpress.excellenteconomy.api.currency.ExcellentCurrency;
+import su.nightexpress.excellenteconomy.data.postgres.*;
 import su.nightexpress.excellenteconomy.user.CoinsUser;
-import su.nightexpress.excellenteconomy.user.data.CurrencySettings;
-import su.nightexpress.excellenteconomy.user.data.CurrencySettingsSerializer;
-import su.nightexpress.nightcore.db.AbstractDatabaseManager;
-import su.nightexpress.nightcore.db.column.Column;
-import su.nightexpress.nightcore.db.statement.condition.Operator;
-import su.nightexpress.nightcore.db.statement.condition.Wheres;
-import su.nightexpress.nightcore.db.statement.template.InsertStatement;
-import su.nightexpress.nightcore.db.statement.template.SelectStatement;
-import su.nightexpress.nightcore.db.statement.template.UpdateStatement;
-import su.nightexpress.nightcore.db.table.Table;
-import su.nightexpress.nightcore.user.data.UserDataSchema;
-import su.nightexpress.nightcore.util.TimeUtil;
+import su.nightexpress.excellenteconomy.user.data.*;
+import su.nightexpress.nightcore.manager.AbstractManager;
+import su.nightexpress.nightcore.user.data.*;
+import java.util.*;
 
-import java.util.Collection;
-import java.util.Set;
-import java.util.UUID;
+/** Storage boundary: NightCore continues handling MySQL/SQLite; PostgreSQL uses its native dialect. */
+public class DataHandler extends AbstractManager<EconomyPlugin> implements UserDataSchema<CoinsUser> {
+    public static final Gson GSON=new GsonBuilder().registerTypeAdapter(CurrencySettings.class,new CurrencySettingsSerializer()).create();
+    private final LegacyDataHandler legacy;
+    private final PostgresAccounts postgres;
+    private final UserDataAccessor<CoinsUser> accessor;
+    private volatile boolean synchronizationActive=true;
 
-public class DataHandler extends AbstractDatabaseManager<EconomyPlugin> implements UserDataSchema<CoinsUser> {
-
-    public static final Gson GSON = new GsonBuilder().setPrettyPrinting()
-        .registerTypeAdapter(CurrencySettings.class, new CurrencySettingsSerializer())
-        .create();
-
-    private final Table usersTable;
-
-    private boolean synchronizationActive; // A little helper to pause synchronization during operations disable
-
-    public DataHandler(@NonNull EconomyPlugin plugin) {
+    public DataHandler(EconomyPlugin plugin) {
         super(plugin);
-        this.setSynchronizationActive(true);
-
-        this.usersTable = Table.builder(this.getTablePrefix() + "_users")
-            .withColumn(DataColumns.ID)
-            .withColumn(DataColumns.USER_UUID)
-            .withColumn(DataColumns.USER_NAME)
-            .withColumn(DataColumns.USER_LAST_SEEN)
-            .withColumn(DataColumns.USER_SETTINGS)
-            .withColumn(DataColumns.USER_HIDE_FROM_TOPS)
-            .build();
+        String type=plugin.getEngineConfig().getString("Database.Type","SQLITE").toUpperCase(Locale.ROOT);
+        if(Set.of("POSTGRESQL","POSTGRES","PGSQL").contains(type)) {
+            legacy=null; postgres=new PostgresAccounts(PostgresSettings.read(plugin.getEngineConfig())); accessor=postgres;
+        } else if(Set.of("MYSQL","SQLITE").contains(type)) {
+            postgres=null; legacy=new LegacyDataHandler(plugin); accessor=new DefaultUserDataAccessor<>(legacy,legacy);
+        } else throw new IllegalArgumentException("Unsupported database type; refusing a storage fallback");
     }
-
-    @Override
-    protected void onInitialize() {
-        this.createTable(this.usersTable);
-
-        this.dropColumn(this.usersTable, "dateCreated");
-        this.dropColumn(this.usersTable, "last_online");
+    @Override protected void onLoad() {
+        if(legacy!=null) legacy.setup();
+        else {
+            postgres.initialize();
+            if(plugin.getEngineConfig().getBoolean("Database.Purge.Enabled",false)) {
+                int days=plugin.getEngineConfig().getInt("Database.Purge.For_Period",60);
+                if(days>0) postgres.purgeBefore(System.currentTimeMillis()-java.time.Duration.ofDays(days).toMillis());
+            }
+            int interval=plugin.getEngineConfig().getInt("Database.PostgreSQL.Balance_Refresh_Interval",1);
+            if(interval<1 || interval>300) throw new IllegalArgumentException("PostgreSQL balance refresh interval must be between 1 and 300 seconds");
+            if(interval>0) addAsyncTask(()->{
+                if(synchronizationActive) plugin.getAPI().userManager().synchronizeAccounts(() -> postgres.synchronize(List.copyOf(plugin.getAPI().userManager().getRepository().getLoadedByIdMap().keySet())));
+            },interval);
+        }
     }
-
-    @Override
-    protected void onClose() {
+    @Override protected void onShutdown() {
+        if(legacy!=null) legacy.shutdown(); else postgres.close();
         DataColumns.clearCache();
     }
-
-    @Override
-    public void onPurge() {
-        int period = this.config.getPurgePeriod();
-        long deadline = TimeUtil.toEpochMillis(TimeUtil.getCurrentDateTime().minusDays(period));
-
-        this.delete(this.usersTable, Wheres.where(DataColumns.USER_LAST_SEEN, Operator.SMALLER, o -> deadline));
+    public void refreshBalances() { if(postgres!=null) postgres.synchronize(List.copyOf(plugin.getAPI().userManager().getRepository().getLoadedByIdMap().keySet())); }
+    private LegacyDataHandler legacySchema() {
+        if(legacy==null) throw new UnsupportedOperationException("PostgreSQL uses the native account accessor, not NightCore's MySQL/SQLite SQL dialect");
+        return legacy;
     }
+    public su.nightexpress.nightcore.db.config.DatabaseConfig getConfig() { return legacySchema().getConfig(); }
+    public su.nightexpress.nightcore.db.config.DatabaseType getDatabaseType() { return legacySchema().getDatabaseType(); }
+    public String getTablePrefix() { return postgres!=null?postgres.settings().tablePrefix():legacy.getTablePrefix(); }
+    public su.nightexpress.nightcore.db.connection.AbstractConnector getConnector() { return legacySchema().getConnector(); }
+    @Override public su.nightexpress.nightcore.db.table.Table getUsersTable() { return legacySchema().getUsersTable(); }
+    @Override public su.nightexpress.nightcore.db.column.Column<UUID> getUserIdColumn() { return DataColumns.USER_UUID; }
+    @Override public su.nightexpress.nightcore.db.column.Column<String> getUserNameColumn() { return DataColumns.USER_NAME; }
+    @Override public su.nightexpress.nightcore.db.statement.template.SelectStatement<CoinsUser> getUserSelectStatement() { return DataQueries.userSelect(); }
+    @Override public su.nightexpress.nightcore.db.statement.template.InsertStatement<CoinsUser> getUserInsertStatement() { return DataQueries.userInsert(); }
+    @Override public su.nightexpress.nightcore.db.statement.template.UpdateStatement<CoinsUser> getUserUpdateStatement() { return DataQueries.userUpdate(); }
+    @Override public su.nightexpress.nightcore.db.statement.template.UpdateStatement<CoinsUser> getUserTinyUpdateStatement() { return DataQueries.userTinyUpdate(); }
 
-    @Override
-    public void onSynchronize() {
-        // Do not synchronize data if operations are disabled to prevent data loss/clash.
-        if (!this.synchronizationActive) return;
-
-        this.synchronizer.syncAll();
+    public UserDataAccessor<CoinsUser> getUserDataAccessor() { return accessor; }
+    public java.util.List<su.nightexpress.excellenteconomy.tops.TopEntry> leaderboard(ExcellentCurrency currency) { return postgres.leaderboard(currency); }
+    public void onCommitted(java.util.function.Consumer<Collection<CoinsUser>> callback) { if(postgres!=null) postgres.onCommitted(callback); }
+    public <T> T atomic(Collection<UUID> ids,java.util.function.Function<Map<UUID,CoinsUser>,T> action,java.util.function.Predicate<T> success,T failure) {
+        try { return postgres.atomic(ids,action,success); }
+        catch(RuntimeException e) { plugin.error("PostgreSQL transaction rejected; no financial success was acknowledged."); return failure; }
     }
-
-    public void onCurrencyRegister(@NonNull ExcellentCurrency currency) {
-        this.addCurrencyColumn(currency);
+    public boolean edit(UUID uuid,ExcellentCurrency currency,java.util.function.Consumer<su.nightexpress.excellenteconomy.user.UserBalance> action) {
+        if(!synchronizationActive || su.nightexpress.excellenteconomy.user.CoinsUser.balanceChangeInProgress()) return false;
+        return atomic(List.of(uuid),users->users.get(uuid).tryEditBalance(currency,action),Boolean::booleanValue,false);
     }
-
-    public void onCurrencyUnload(@NonNull ExcellentCurrency currency) {
-        DataColumns.uncacheCurrency(currency);
-    }
-
-    public void setSynchronizationActive(boolean synchronizationActive) {
-        this.synchronizationActive = synchronizationActive;
-    }
-
-    public void addCurrencyColumn(@NonNull ExcellentCurrency currency) {
-        this.addColumn(this.usersTable, DataColumns.forCurrency(currency));
-    }
-
-    @Override
-    @NonNull
-    public Table getUsersTable() {
-        return this.usersTable;
-    }
-
-    @Override
-    @NonNull
-    public Column<UUID> getUserIdColumn() {
-        return DataColumns.USER_UUID;
-    }
-
-    @Override
-    @NonNull
-    public Column<String> getUserNameColumn() {
-        return DataColumns.USER_NAME;
-    }
-
-    @Override
-    @NonNull
-    public SelectStatement<CoinsUser> getUserSelectStatement() {
-        return DataQueries.userSelect();
-    }
-
-    @Override
-    @NonNull
-    public InsertStatement<CoinsUser> getUserInsertStatement() {
-        return DataQueries.userInsert();
-    }
-
-    @Override
-    @NonNull
-    public UpdateStatement<CoinsUser> getUserUpdateStatement() {
-        return DataQueries.userUpdate();
-    }
-
-    @Override
-    @NonNull
-    public UpdateStatement<CoinsUser> getUserTinyUpdateStatement() {
-        return DataQueries.userTinyUpdate();
-    }
-
-    public void resetBalances(@NonNull ExcellentCurrency currency) {
-        this.resetBalances(Set.of(currency));
-    }
-
-    public void resetBalances(@NonNull Collection<ExcellentCurrency> currencies) {
-        UpdateStatement.Builder<Object> builder = UpdateStatement.builder();
-
-        for (ExcellentCurrency currency : currencies) {
-            builder.setDouble(DataColumns.forCurrency(currency), o -> currency.getStartValue());
-        }
-
-        this.update(this.usersTable, builder.build(), currencies);
-    }
+    public boolean isPostgres() { return postgres!=null; }
+    public void setSynchronizationActive(boolean active) { synchronizationActive=active; if(legacy!=null) legacy.setSynchronizationActive(active); }
+    public void onCurrencyRegister(ExcellentCurrency c) { if(legacy!=null) legacy.onCurrencyRegister(c); else postgres.registerCurrency(c); }
+    public void onCurrencyUnload(ExcellentCurrency c) { if(legacy!=null) legacy.onCurrencyUnload(c); else postgres.unregisterCurrency(c); }
+    public void addCurrencyColumn(ExcellentCurrency c) { onCurrencyRegister(c); }
+    public void resetBalances(ExcellentCurrency c) { resetBalances(Set.of(c)); }
+    public void resetBalances(Collection<ExcellentCurrency> currencies) { if(legacy!=null) legacy.resetBalances(currencies); else postgres.resetBalances(currencies); }
 }

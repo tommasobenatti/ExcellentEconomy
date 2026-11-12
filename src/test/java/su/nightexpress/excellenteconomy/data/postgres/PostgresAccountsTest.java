@@ -64,7 +64,7 @@ class PostgresAccountsTest {
         var duplicate = new CoinsUser(user.getId(), "Ignored", new su.nightexpress.excellenteconomy.user.UserBalance(Map.of("money",0D)), Map.of(), 0, false);
         store.insert(duplicate);
         assertEquals(1250.25, store.loadById(user.getId()).orElseThrow().getBalance(money));
-        user.getBalance().set("money", 1200.5); store.update(user);
+        store.atomic(List.of(user.getId()),rows -> su.nightexpress.excellenteconomy.user.BalanceTransactions.set(rows.get(user.getId()),money,1200.5),Boolean::booleanValue);
         assertEquals(1200.5, store.loadById(user.getId()).orElseThrow().getBalance(money));
         store.resetBalances(List.of(currency("souls", 0)));
         assertEquals(0, store.loadById(user.getId()).orElseThrow().getBalance().get("souls"));
@@ -81,6 +81,7 @@ class PostgresAccountsTest {
 
     @Test void rejectsUnsafeIdentifiersAndRollsBackFailedBatches() throws Exception {
         assertThrows(IllegalArgumentException.class, () -> store.registerCurrency(currency("bad\"; DROP TABLE x",0)));
+        assertThrows(IllegalArgumentException.class, () -> store.registerCurrency(currency("balance_version",0)));
         var money=TestServer.currency("money");
         var first=TestServer.user("First",money,10); var missing=TestServer.user("Missing",money,0);
         store.insert(first); first.getBalance().set("money",20);
@@ -93,9 +94,10 @@ class PostgresAccountsTest {
         var user=TestServer.user("shared",money,100);
         store.insert(user);
         var stale=store.loadById(user.getId()).orElseThrow();
-        FileConfig settings=FileConfig.load(directory.resolve("engine.yml"));
         // Reuse the same settings from the owning store through an explicit second connection pool.
         var second=new PostgresAccounts(store.settings());
+        for(String id:List.of("money","coins","souls")) second.registerCurrency(currency(id,id.equals("money")?1000:0));
+        assertEquals(100,second.loadById(user.getId()).orElseThrow().getBalance(money));
         try(second; var threads=java.util.concurrent.Executors.newFixedThreadPool(8)) {
             var work=new ArrayList<java.util.concurrent.Callable<Boolean>>();
             for(int n=0;n<20;n++) { var backend=n%2==0?store:second;
@@ -107,6 +109,53 @@ class PostgresAccountsTest {
             store.update(stale);
             assertEquals(0,store.loadById(user.getId()).orElseThrow().getBalance(money));
         }
+    }
+
+    @Test @SuppressWarnings({"rawtypes","unchecked"})
+    void nativeVaultUsesAtomicBackendEvenWithStaleCachedAccounts() throws Exception {
+        var money=TestServer.currency("money"); when(money.isPrimary()).thenReturn(true);
+        var from=TestServer.user("from",money,100); var to=TestServer.user("to",money,0);
+        store.insert(List.of(from,to));
+        var registry=new su.nightexpress.excellenteconomy.currency.CurrencyRegistry(); registry.add(money);
+        var users=mock(su.nightexpress.excellenteconomy.user.UserManager.class);
+        when(users.findById(from.getId())).thenReturn(Optional.of(from)); when(users.findById(to.getId())).thenReturn(Optional.of(to));
+        var data=mock(su.nightexpress.excellenteconomy.data.DataHandler.class); when(data.isPostgres()).thenReturn(true);
+        when(data.atomic(anyCollection(),any(),any(),any())).thenAnswer(call->store.atomic(call.getArgument(0),call.getArgument(1),call.getArgument(2)));
+        var manager=new su.nightexpress.excellenteconomy.currency.CurrencyManager(mock(su.nightexpress.excellenteconomy.EconomyPlugin.class),registry,mock(su.nightexpress.excellenteconomy.command.CommandManager.class),data,users);
+        var api=mock(su.nightexpress.excellenteconomy.api.ExcellentEconomyAPI.class);
+        when(api.currencyRegistry()).thenReturn(registry); when(api.currencyManager()).thenReturn(manager); when(api.userManager()).thenReturn(users);
+        var vault=new su.nightexpress.excellenteconomy.hook.VaultUnlockedEconomy(api);
+        assertEquals(net.milkbowl.vault2.economy.EconomyResponse.ResponseType.SUCCESS,vault.transfer("test",from.getId(),to.getId(),new java.math.BigDecimal("60")).type);
+        assertEquals(net.milkbowl.vault2.economy.EconomyResponse.ResponseType.FAILURE,vault.transfer("test",from.getId(),to.getId(),new java.math.BigDecimal("60")).type);
+        assertEquals(40,store.loadById(from.getId()).orElseThrow().getBalance(money));
+        assertEquals(60,store.loadById(to.getId()).orElseThrow().getBalance(money));
+    }
+
+    @Test void cancelledBalanceAndFailedNotificationCannotLieAboutCommit() throws Exception {
+        var money=TestServer.currency("money"); var user=TestServer.user("cancel",money,100); store.insert(user);
+        doAnswer(call -> { ((su.nightexpress.excellenteconomy.api.event.ChangeBalanceEvent)call.getArgument(0)).setCancelled(true); return null; })
+            .when(TestServer.PLUGINS).callEvent(any(su.nightexpress.excellenteconomy.api.event.ChangeBalanceEvent.class));
+        try { assertFalse(store.<Boolean>atomic(List.of(user.getId()),rows->su.nightexpress.excellenteconomy.user.BalanceTransactions.withdraw(rows.get(user.getId()),money,10),Boolean::booleanValue)); }
+        finally { reset(TestServer.PLUGINS); }
+        assertEquals(100,store.loadById(user.getId()).orElseThrow().getBalance(money));
+        store.onCommitted(accounts->{ throw new IllegalStateException("notification"); });
+        assertTrue(store.<Boolean>atomic(List.of(user.getId()),rows->su.nightexpress.excellenteconomy.user.BalanceTransactions.withdraw(rows.get(user.getId()),money,10),Boolean::booleanValue));
+        assertEquals(90,store.loadById(user.getId()).orElseThrow().getBalance(money));
+    }
+
+    @Test void rollbackDiscardsSuccessEffectsAndRejectsUnselectedCachedObjects() throws Exception {
+        var money=TestServer.currency("money"); var user=TestServer.user("effects",money,100); store.insert(user);
+        var effects=new ArrayList<String>();
+        boolean accepted=store.atomic(List.of(user.getId()),rows->{
+            assertFalse(user.tryEditBalance(money,balance->balance.set("money",999)));
+            assertTrue(su.nightexpress.excellenteconomy.user.BalanceTransactions.deposit(rows.get(user.getId()),money,5));
+            AccountTransaction.defer(()->effects.add("success"));
+            AccountTransaction.feedback(()->effects.add("failure"));
+            return false;
+        },Boolean::booleanValue);
+        assertFalse(accepted); assertEquals(List.of("failure"),effects);
+        assertEquals(100,store.loadById(user.getId()).orElseThrow().getBalance(money));
+        assertEquals(100,user.getBalance(money));
     }
 
     private su.nightexpress.excellenteconomy.api.currency.ExcellentCurrency currency(String column, double start) {

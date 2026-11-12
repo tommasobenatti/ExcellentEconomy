@@ -56,4 +56,63 @@ class SavePipelineTest {
             verify(store,times(1)).loadById(cold.getId());
         }
     }
+    @Test @SuppressWarnings("unchecked")
+    void dirtyAccountsSurviveExpiredCacheAndUnavailableDatabase() {
+        TestServer.initialize();
+        var store=(UserDataAccessor<CoinsUser>)mock(UserDataAccessor.class);
+        var data=mock(DataHandler.class); when(data.getUserDataAccessor()).thenReturn(store);
+        var users=new UserManager(mock(EconomyPlugin.class),new CurrencyRegistry(),data);
+        var money=TestServer.currency("money"); var user=TestServer.user("Owner",money,100);
+        users.cachePermanent(user); user.addBalance(money,5);
+        var expired=new su.nightexpress.nightcore.user.cache.CachedUser<>(user,System.currentTimeMillis()-1000);
+        users.getRepository().getLoadedByIdMap().put(user.getId(),expired);
+        users.getRepository().getLoadedByNameMap().put("owner",expired);
+        doThrow(new IllegalStateException("offline")).when(store).update(anyCollection());
+        users.saveDirty(); users.cleanCache();
+        assertSame(user,users.findById(user.getId()).orElseThrow());
+        assertSame(user,users.findByName("OWNER").orElseThrow());
+        assertEquals(105,user.getBalance(money)); assertTrue(user.isDirty());
+        verify(store,never()).loadById(any()); verify(store,never()).loadByName(any());
+    }
+
+    @Test @SuppressWarnings("unchecked")
+    void anInflightLookupCannotInstallAPreMaintenanceSnapshot() throws Exception {
+        TestServer.initialize();
+        var store=(UserDataAccessor<CoinsUser>)mock(UserDataAccessor.class);
+        var data=mock(DataHandler.class); when(data.getUserDataAccessor()).thenReturn(store);
+        var users=new UserManager(mock(EconomyPlugin.class),new CurrencyRegistry(),data);
+        var money=TestServer.currency("money"); var old=TestServer.user("user",money,100);
+        var fresh=old.snapshot(); fresh.getBalance().set("money",0);
+        CountDownLatch fetched=new CountDownLatch(1), release=new CountDownLatch(1);
+        var calls=new java.util.concurrent.atomic.AtomicInteger();
+        when(store.loadById(old.getId())).thenAnswer(call -> { if(calls.getAndIncrement()==0) { fetched.countDown(); assertTrue(release.await(5,TimeUnit.SECONDS)); return Optional.of(old); } return Optional.of(fresh); });
+        try(var executor=Executors.newSingleThreadExecutor()) {
+            var lookup=executor.submit(()->users.findById(old.getId())); assertTrue(fetched.await(5,TimeUnit.SECONDS));
+            try { users.maintenance(()->{}); } finally { release.countDown(); }
+            assertSame(fresh,lookup.get().orElseThrow()); assertEquals(0,users.findById(old.getId()).orElseThrow().getBalance(money));
+        }
+        verify(store,times(2)).loadById(old.getId());
+    }
+
+    @Test @SuppressWarnings("unchecked")
+    void asyncNamesPreferTheOnlineUuidAndPlayerOperationsNeverLoadSql() throws Exception {
+        TestServer.initialize();
+        var store=(UserDataAccessor<CoinsUser>)mock(UserDataAccessor.class);
+        var data=mock(DataHandler.class); when(data.getUserDataAccessor()).thenReturn(store);
+        var users=new UserManager(mock(EconomyPlugin.class),new CurrencyRegistry(),data);
+        var money=TestServer.currency("money"); var old=TestServer.user("ReusedName",money,100);
+        var current=TestServer.user("ReusedName",money,50);
+        users.cachePermanent(old);
+        org.bukkit.entity.Player player=mock(org.bukkit.entity.Player.class);
+        when(player.getUniqueId()).thenReturn(current.getId());
+        when(org.bukkit.Bukkit.getPlayerExact("ReusedName")).thenReturn(player);
+        when(store.loadById(current.getId())).thenReturn(Optional.of(current));
+        try {
+            assertThrows(IllegalStateException.class,()->users.requireLoaded(player));
+            verifyNoInteractions(store);
+            assertSame(current,users.findByNameAsync("ReusedName").get().orElseThrow());
+            assertSame(current,users.requireLoaded(player));
+        } finally { when(org.bukkit.Bukkit.getPlayerExact("ReusedName")).thenReturn(null); }
+    }
+
 }

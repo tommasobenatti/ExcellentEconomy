@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "su.nightexpress.excellenteconomy"
-version = "2.8.1-mcexp.1"
+version = "2.9.0-mcexp.1"
 
 java {
     toolchain {
@@ -33,6 +33,8 @@ dependencies {
     compileOnly("su.nightexpress.nightcore:main:2.16.7")
     compileOnly("me.clip:placeholderapi:2.11.6")
     compileOnly("org.black_ixx:playerpoints:3.0.0")
+    implementation("org.postgresql:postgresql:42.7.14")
+    implementation("com.zaxxer:HikariCP:7.0.2")
     testImplementation("org.junit.jupiter:junit-jupiter:5.13.4")
     testImplementation("org.mockito:mockito-core:5.20.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -48,7 +50,7 @@ jacoco {
 
 tasks {
     test {
-        useJUnitPlatform()
+        useJUnitPlatform { excludeTags("postgres") }
     }
 
     jacocoTestReport {
@@ -61,7 +63,18 @@ tasks {
         options.encoding = "UTF-8"
     }
 
+    register<Test>("postgresTest") {
+        testClassesDirs = sourceSets.test.get().output.classesDirs
+        classpath = sourceSets.test.get().runtimeClasspath
+        useJUnitPlatform { includeTags("postgres") }
+    }
+    jar {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        from(configurations.runtimeClasspath.get().filter { it.name.endsWith("jar") }.map { zipTree(it) })
+        exclude("META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.DSA", "org/slf4j/**")
+    }
     processResources {
+        inputs.property("pluginVersion", project.version)
         // Replicates maven <filtering>true</filtering> for plugin.yml
         // Replaces ${version} with the project version.
         filesMatching("*plugin.yml") {

@@ -34,6 +34,7 @@ import su.nightexpress.excellenteconomy.user.BalanceTransactions;
 import su.nightexpress.excellenteconomy.user.UserManager;
 import su.nightexpress.excellenteconomy.user.data.CurrencySettings;
 import su.nightexpress.nightcore.config.FileConfig;
+import su.nightexpress.excellenteconomy.config.SafeFileConfig;
 import su.nightexpress.nightcore.core.config.CoreLang;
 import su.nightexpress.nightcore.manager.AbstractManager;
 import su.nightexpress.nightcore.util.FileUtil;
@@ -49,6 +50,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.format.DateTimeFormatter;
 import java.util.Collection;
+import java.util.List;
+import su.nightexpress.excellenteconomy.data.postgres.AccountTransaction;
 import java.util.Comparator;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -158,7 +161,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
             String fileName = path.getFileName().toString();
             if (!fileName.endsWith(FileConfig.EXTENSION)) return;
 
-            FileConfig config = FileConfig.load(path);
+            FileConfig config = SafeFileConfig.load(path);
             if (!config.contains("Economy")) return;
 
             if (config.getBoolean("Economy.Vault")) {
@@ -406,8 +409,11 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
                     if (currency == null) Lang.RESET_ALL_STARTED_GLOBAL.message().send(sender);
                     else Lang.RESET_ALL_STARTED_CURRENCY.message().sendWith(sender, builder -> builder.with(currency.placeholders()));
                 });
-                this.dataHandler.resetBalances(currencies);
-                this.userManager.getRepository().getAll().forEach(user -> user.resetBalance(currencies));
+                this.userManager.maintenance(() -> {
+                    this.dataHandler.resetBalances(currencies);
+                    if(this.dataHandler.isPostgres()) this.dataHandler.refreshBalances();
+                    else this.userManager.getRepository().getAll().forEach(user -> user.resetBalance(currencies));
+                });
                 this.plugin.runForSender(sender, () -> {
                     if (currency == null) Lang.RESET_ALL_COMPLETED_GLOBAL.message().send(sender);
                     else Lang.RESET_ALL_COMPLETED_CURRENCY.message().sendWith(sender, builder -> builder.with(currency.placeholders()));
@@ -420,7 +426,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
     }
 
     public boolean getPaymentsState(@NonNull Player player, @NonNull ExcellentCurrency currency) {
-        return this.getPaymentsState(this.userManager.getOrFetch(player), currency);
+        return this.getPaymentsState(this.userManager.requireLoaded(player), currency);
     }
 
     public boolean getPaymentsState(@NonNull CoinsUser user, @NonNull ExcellentCurrency currency) {
@@ -428,7 +434,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
     }
 
     public void showBalance(@NonNull Player player, @NonNull ExcellentCurrency currency) {
-        this.showBalance(player, this.userManager.getOrFetch(player), currency);
+        this.showBalance(player, this.userManager.requireLoaded(player), currency);
     }
 
     public void showBalance(@NonNull CommandSender sender, @NonNull CoinsUser user,
@@ -442,7 +448,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
     }
 
     public boolean showWallet(@NonNull Player player) {
-        return this.showWallet(player, this.userManager.getOrFetch(player));
+        return this.showWallet(player, this.userManager.requireLoaded(player));
     }
 
     public boolean showWallet(@NonNull CommandSender sender, @NonNull CoinsUser user) {
@@ -464,7 +470,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
     }
 
     public boolean togglePayments(@NonNull Player player, @NonNull ExcellentCurrency currency) {
-        CoinsUser user = this.userManager.getOrFetch(player);
+        CoinsUser user = this.userManager.requireLoaded(player);
 
         return this.togglePayments(user, currency, false);
     }
@@ -488,7 +494,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
     }
 
     public double getBalance(@NonNull Player player, @NonNull ExcellentCurrency currency) {
-        return this.getBalance(this.userManager.getOrFetch(player), currency);
+        return this.getBalance(this.userManager.requireLoaded(player), currency);
     }
 
     public double getBalance(@NonNull CoinsUser user, @NonNull ExcellentCurrency currency) {
@@ -498,15 +504,17 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
     @NonNull
     public OperationResult give(@NonNull OperationContext context, @NonNull Player player,
                                 @NonNull ExcellentCurrency currency, double amount) {
-        synchronized (UserBalance.class) {
-            return this.give(context, this.userManager.getOrFetch(player), currency, amount);
-
-        }
+        return this.give(context, this.userManager.requireLoaded(player), currency, amount);
     }
 
     @NonNull
     public OperationResult give(@NonNull OperationContext context, @NonNull CoinsUser user,
                                 @NonNull ExcellentCurrency currency, double amount) {
+        if(this.dataHandler.isPostgres() && CoinsUser.balanceChangeInProgress()) return OperationResult.FAILURE;
+        if(this.dataHandler.isPostgres() && !AccountTransaction.active()) {
+            if(!assertOperationsEnabled(context)) return OperationResult.FAILURE;
+            return this.dataHandler.atomic(List.of(user.getId()), rows -> this.give(context, rows.get(user.getId()), currency, amount), OperationResult::success, OperationResult.FAILURE);
+        }
         synchronized (UserBalance.class) {
             if (!this.assertOperationsEnabled(context)) return OperationResult.FAILURE;
 
@@ -548,12 +556,17 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
     @NonNull
     public OperationResult giveAll(@NonNull OperationContext context, @NonNull ExcellentCurrency currency,
                                    double amount) {
+        if(this.dataHandler.isPostgres() && CoinsUser.balanceChangeInProgress()) return OperationResult.FAILURE;
+        if(this.dataHandler.isPostgres() && !AccountTransaction.active()) {
+            var ids=this.userManager.getRepository().getLoadedByIdMap().values().stream().map(entry -> entry.user()).filter(CoinsUser::isOnline).map(CoinsUser::getId).toList();
+            return this.dataHandler.atomic(ids,rows -> this.giveAll(context,currency,amount),OperationResult::success,OperationResult.FAILURE);
+        }
         synchronized (UserBalance.class) {
             if (!this.assertOperationsEnabled(context)) return OperationResult.FAILURE;
 
             if (!BalanceTransactions.validAmount(amount)) return OperationResult.FAILURE;
             OperationExecutor executor = context.getExecutor();
-            Set<CoinsUser> users = this.userManager.getRepository().getAll();
+            Set<CoinsUser> users = AccountTransaction.active() ? new java.util.HashSet<>(AccountTransaction.accounts()) : this.userManager.getRepository().getAll();
             int size = users.size();
             String names = users.stream().map(CoinsUser::getName).collect(Collectors.joining(", "));
 
@@ -594,15 +607,17 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
     @NonNull
     public OperationResult remove(@NonNull OperationContext context, @NonNull Player player,
                                   @NonNull ExcellentCurrency currency, double amount) {
-        synchronized (UserBalance.class) {
-            return this.remove(context, this.userManager.getOrFetch(player), currency, amount);
-
-        }
+        return this.remove(context, this.userManager.requireLoaded(player), currency, amount);
     }
 
     @NonNull
     public OperationResult remove(@NonNull OperationContext context, @NonNull CoinsUser user,
                                   @NonNull ExcellentCurrency currency, double amount) {
+        if(this.dataHandler.isPostgres() && CoinsUser.balanceChangeInProgress()) return OperationResult.FAILURE;
+        if(this.dataHandler.isPostgres() && !AccountTransaction.active()) {
+            if(!assertOperationsEnabled(context)) return OperationResult.FAILURE;
+            return this.dataHandler.atomic(List.of(user.getId()), rows -> this.remove(context, rows.get(user.getId()), currency, amount), OperationResult::success, OperationResult.FAILURE);
+        }
         synchronized (UserBalance.class) {
             if (!this.assertOperationsEnabled(context)) return OperationResult.FAILURE;
 
@@ -644,15 +659,17 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
     @NonNull
     public OperationResult set(@NonNull OperationContext context, @NonNull Player player,
                                @NonNull ExcellentCurrency currency, double amount) {
-        synchronized (UserBalance.class) {
-            return this.set(context, this.userManager.getOrFetch(player), currency, amount);
-
-        }
+        return this.set(context, this.userManager.requireLoaded(player), currency, amount);
     }
 
     @NonNull
     public OperationResult set(@NonNull OperationContext context, @NonNull CoinsUser user,
                                @NonNull ExcellentCurrency currency, double amount) {
+        if(this.dataHandler.isPostgres() && CoinsUser.balanceChangeInProgress()) return OperationResult.FAILURE;
+        if(this.dataHandler.isPostgres() && !AccountTransaction.active()) {
+            if(!assertOperationsEnabled(context)) return OperationResult.FAILURE;
+            return this.dataHandler.atomic(List.of(user.getId()), rows -> this.set(context, rows.get(user.getId()), currency, amount), OperationResult::success, OperationResult.FAILURE);
+        }
         synchronized (UserBalance.class) {
             if (!this.assertOperationsEnabled(context)) return OperationResult.FAILURE;
 
@@ -695,15 +712,17 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
     @NonNull
     public OperationResult reset(@NonNull OperationContext context, @NonNull Player player,
                                  @NonNull ExcellentCurrency currency) {
-        synchronized (UserBalance.class) {
-            return this.reset(context, this.userManager.getOrFetch(player), currency);
-
-        }
+        return this.reset(context, this.userManager.requireLoaded(player), currency);
     }
 
     @NonNull
     public OperationResult reset(@NonNull OperationContext context, @NonNull CoinsUser user,
                                  @NonNull ExcellentCurrency currency) {
+        if(this.dataHandler.isPostgres() && CoinsUser.balanceChangeInProgress()) return OperationResult.FAILURE;
+        if(this.dataHandler.isPostgres() && !AccountTransaction.active()) {
+            if(!assertOperationsEnabled(context)) return OperationResult.FAILURE;
+            return this.dataHandler.atomic(List.of(user.getId()), rows -> this.reset(context, rows.get(user.getId()), currency), OperationResult::success, OperationResult.FAILURE);
+        }
         synchronized (UserBalance.class) {
             if (!this.assertOperationsEnabled(context)) return OperationResult.FAILURE;
 
@@ -742,6 +761,12 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
     }
 
     public OperationResult transfer(OperationContext context, CoinsUser sender, CoinsUser receiver, ExcellentCurrency currency, double amount) {
+        if(!currency.isTransferAllowed()) return OperationResult.FAILURE;
+        if(this.dataHandler.isPostgres() && CoinsUser.balanceChangeInProgress()) return OperationResult.FAILURE;
+        if(this.dataHandler.isPostgres() && !AccountTransaction.active()) {
+            if(!assertOperationsEnabled(context)) return OperationResult.FAILURE;
+            return this.dataHandler.atomic(List.of(sender.getId(),receiver.getId()), rows -> this.transfer(context,rows.get(sender.getId()),rows.get(receiver.getId()),currency,amount),OperationResult::success,OperationResult.FAILURE);
+        }
         synchronized (UserBalance.class) {
             if (!this.assertOperationsEnabled(context)
                 || !BalanceTransactions.transfer(sender, currency, receiver, currency, amount, amount)) return OperationResult.FAILURE;
@@ -758,18 +783,22 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
 
     public boolean send(@NonNull Player sender, @NonNull CoinsUser targetUser, @NonNull ExcellentCurrency currency,
                         double rawAmount) {
+        if(this.dataHandler.isPostgres() && CoinsUser.balanceChangeInProgress()) return false;
+        if(this.dataHandler.isPostgres() && !AccountTransaction.active()) {
+            return this.dataHandler.atomic(List.of(sender.getUniqueId(),targetUser.getId()), rows -> this.send(sender,rows.get(targetUser.getId()),currency,rawAmount),Boolean::booleanValue,false);
+        }
         synchronized (UserBalance.class) {
             OperationContext context = OperationContext.of(sender);
 
             if (!currency.isTransferAllowed() || !currency.isCommandEnabled("send") || !currency.hasPermission(sender)
                 || !sender.hasPermission(Perms.currencyCommand(currency, Perms.COMMAND_CURRENCY_SEND))) {
-                this.plugin.runForSender(sender, () -> currency.sendPrefixed(CoreLang.ERROR_NO_PERMISSION, sender));
+                this.plugin.runFailureForSender(sender, () -> currency.sendPrefixed(CoreLang.ERROR_NO_PERMISSION, sender));
                 return false;
             }
             if (!this.assertOperationsEnabled(context)) return false;
 
             if (targetUser.isHolder(sender)) {
-                this.plugin.runForSender(sender, () -> currency.sendPrefixed(CoreLang.COMMAND_EXECUTION_NOT_YOURSELF, sender));
+                this.plugin.runFailureForSender(sender, () -> currency.sendPrefixed(CoreLang.COMMAND_EXECUTION_NOT_YOURSELF, sender));
                 return false;
             }
 
@@ -778,7 +807,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
 
             double minAmount = currency.getMinTransferAmount();
             if (minAmount > 0 && amount < minAmount) {
-                this.plugin.runForSender(sender, () -> currency.sendPrefixed(Lang.CURRENCY_SEND_ERROR_TOO_LOW, sender, builder -> builder
+                this.plugin.runFailureForSender(sender, () -> currency.sendPrefixed(Lang.CURRENCY_SEND_ERROR_TOO_LOW, sender, builder -> builder
                     .with(EconomyPlaceholders.GENERIC_AMOUNT, () -> currency.format(minAmount))
                 ));
                 return false;
@@ -790,25 +819,25 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
                 quote = tax.quote(amount, currency.isDecimal(), sender::hasPermission);
             }
             catch (IllegalArgumentException exception) {
-                this.plugin.runForSender(sender, () -> currency.sendPrefixed(Lang.CURRENCY_OPERATION_FAILED, sender));
+                this.plugin.runFailureForSender(sender, () -> currency.sendPrefixed(Lang.CURRENCY_OPERATION_FAILED, sender));
                 return false;
             }
-            CoinsUser fromUser = this.userManager.getOrFetch(sender);
+            CoinsUser fromUser = this.userManager.requireLoaded(sender);
             if (quote.debit() > fromUser.getBalance(currency)) {
-                this.plugin.runForSender(sender, () -> currency.sendPrefixed(Lang.CURRENCY_SEND_ERROR_NOT_ENOUGH, sender));
+                this.plugin.runFailureForSender(sender, () -> currency.sendPrefixed(Lang.CURRENCY_SEND_ERROR_NOT_ENOUGH, sender));
                 return false;
             }
 
             CurrencySettings settings = targetUser.getSettings(currency);
             if (!settings.isPaymentsEnabled()) {
-                this.plugin.runForSender(sender, () -> currency.sendPrefixed(Lang.CURRENCY_SEND_ERROR_NO_PAYMENTS, sender, builder -> builder
+                this.plugin.runFailureForSender(sender, () -> currency.sendPrefixed(Lang.CURRENCY_SEND_ERROR_NO_PAYMENTS, sender, builder -> builder
                     .with(CommonPlaceholders.PLAYER_NAME, targetUser::getName)
                 ));
                 return false;
             }
 
             if (!BalanceTransactions.transfer(fromUser, currency, targetUser, currency, quote.debit(), quote.credit())) {
-                this.plugin.runForSender(sender, () -> currency.sendPrefixed(Lang.CURRENCY_OPERATION_FAILED, sender));
+                this.plugin.runFailureForSender(sender, () -> currency.sendPrefixed(Lang.CURRENCY_OPERATION_FAILED, sender));
                 return false;
             }
             targetUser.markDirty();
@@ -855,6 +884,10 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
 
     public boolean exchange(@NonNull Player player, @NonNull ExcellentCurrency sourceCurrency,
                             @NonNull ExcellentCurrency targetCurrency, double initAmount) {
+        if(this.dataHandler.isPostgres() && CoinsUser.balanceChangeInProgress()) return false;
+        if(this.dataHandler.isPostgres() && !AccountTransaction.active()) {
+            return this.dataHandler.atomic(List.of(player.getUniqueId()),rows -> this.exchange(player,sourceCurrency,targetCurrency,initAmount),Boolean::booleanValue,false);
+        }
         synchronized (UserBalance.class) {
             OperationContext context = OperationContext.of(player);
 
@@ -863,30 +896,30 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
             if (!sourceCurrency.hasPermission(player) || !targetCurrency.hasPermission(player)
                 || !sourceCurrency.isCommandEnabled("exchange")
                 || !player.hasPermission(Perms.currencyCommand(sourceCurrency, Perms.COMMAND_CURRENCY_EXCHANGE))) {
-                this.plugin.runForSender(player, () -> sourceCurrency.sendPrefixed(CoreLang.ERROR_NO_PERMISSION, player));
+                this.plugin.runFailureForSender(player, () -> sourceCurrency.sendPrefixed(CoreLang.ERROR_NO_PERMISSION, player));
                 return false;
             }
             if (!sourceCurrency.isExchangeAllowed()) {
-                this.plugin.runForSender(player, () -> sourceCurrency.sendPrefixed(Lang.CURRENCY_EXCHANGE_ERROR_DISABLED, player));
+                this.plugin.runFailureForSender(player, () -> sourceCurrency.sendPrefixed(Lang.CURRENCY_EXCHANGE_ERROR_DISABLED, player));
                 return false;
             }
 
             double amount = sourceCurrency.floorIfNeeded(initAmount);
             if (!Double.isFinite(amount) || amount <= 0D) {
-                this.plugin.runForSender(player, () -> sourceCurrency.sendPrefixed(Lang.CURRENCY_EXCHANGE_ERROR_LOW_AMOUNT, player));
+                this.plugin.runFailureForSender(player, () -> sourceCurrency.sendPrefixed(Lang.CURRENCY_EXCHANGE_ERROR_LOW_AMOUNT, player));
                 return false;
             }
 
-            CoinsUser user = this.userManager.getOrFetch(player);
+            CoinsUser user = this.userManager.requireLoaded(player);
             if (user.getBalance(sourceCurrency) < amount) {
-                this.plugin.runForSender(player, () -> sourceCurrency.sendPrefixed(Lang.CURRENCY_EXCHANGE_ERROR_LOW_BALANCE, player, builder -> builder
+                this.plugin.runFailureForSender(player, () -> sourceCurrency.sendPrefixed(Lang.CURRENCY_EXCHANGE_ERROR_LOW_BALANCE, player, builder -> builder
                     .with(EconomyPlaceholders.GENERIC_AMOUNT, () -> sourceCurrency.format(amount))
                 ));
                 return false;
             }
 
             if (!sourceCurrency.canExchangeTo(targetCurrency)) {
-                this.plugin.runForSender(player, () -> sourceCurrency.sendPrefixed(Lang.CURRENCY_EXCHANGE_ERROR_NO_RATE, player, builder -> builder
+                this.plugin.runFailureForSender(player, () -> sourceCurrency.sendPrefixed(Lang.CURRENCY_EXCHANGE_ERROR_NO_RATE, player, builder -> builder
                     .with(EconomyPlaceholders.GENERIC_NAME, targetCurrency::getName)
                 ));
                 return false;
@@ -894,13 +927,13 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
 
             double result = sourceCurrency.getExchangeResult(targetCurrency, amount);
             if (!Double.isFinite(result) || result <= 0D) {
-                this.plugin.runForSender(player, () -> sourceCurrency.sendPrefixed(Lang.CURRENCY_EXCHANGE_ERROR_LOW_AMOUNT, player));
+                this.plugin.runFailureForSender(player, () -> sourceCurrency.sendPrefixed(Lang.CURRENCY_EXCHANGE_ERROR_LOW_AMOUNT, player));
                 return false;
             }
 
             double newBalance = user.getBalance(targetCurrency) + result;
             if (!targetCurrency.isUnderLimit(newBalance)) {
-                this.plugin.runForSender(player, () -> targetCurrency.sendPrefixed(Lang.CURRENCY_EXCHANGE_ERROR_LIMIT_EXCEED, player, builder -> builder
+                this.plugin.runFailureForSender(player, () -> targetCurrency.sendPrefixed(Lang.CURRENCY_EXCHANGE_ERROR_LIMIT_EXCEED, player, builder -> builder
                     .with(EconomyPlaceholders.GENERIC_AMOUNT, () -> targetCurrency.format(result))
                     .with(EconomyPlaceholders.GENERIC_MAX, () -> targetCurrency.format(targetCurrency.getMaxValue()))
                 ));
@@ -908,7 +941,7 @@ public class CurrencyManager extends AbstractManager<EconomyPlugin> {
             }
 
             if (!BalanceTransactions.transfer(user, sourceCurrency, user, targetCurrency, amount, result)) {
-                this.plugin.runForSender(player, () -> sourceCurrency.sendPrefixed(Lang.CURRENCY_OPERATION_FAILED, player));
+                this.plugin.runFailureForSender(player, () -> sourceCurrency.sendPrefixed(Lang.CURRENCY_OPERATION_FAILED, player));
                 return false;
             }
             user.markDirty();

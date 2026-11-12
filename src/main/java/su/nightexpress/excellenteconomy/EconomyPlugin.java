@@ -9,6 +9,9 @@ import org.jspecify.annotations.Nullable;
 import su.nightexpress.excellenteconomy.api.ExcellentEconomyAPI;
 import su.nightexpress.excellenteconomy.command.CommandManager;
 import su.nightexpress.excellenteconomy.config.Config;
+import su.nightexpress.excellenteconomy.config.SafeFileConfig;
+import su.nightexpress.excellenteconomy.config.SafeLangRegistry;
+import su.nightexpress.excellenteconomy.data.postgres.PostgresSettings;
 import su.nightexpress.excellenteconomy.config.Lang;
 import su.nightexpress.excellenteconomy.config.Perms;
 import su.nightexpress.excellenteconomy.currency.CurrencyManager;
@@ -60,6 +63,30 @@ public class EconomyPlugin extends NightPlugin {
         super.onStartup();
 
         this.currencyRegistry = new CurrencyRegistry();
+    }
+
+    @Override
+    protected void setupConfig() {
+        this.engineConf = SafeFileConfig.load(dataPath().resolve(ENGINE_FILE));
+        this.config = SafeFileConfig.load(dataPath().resolve(CONFIG_FILE));
+        if (this.config.contains("Plugin")) {
+            PluginDetails.read(this, this.config, getDefaultDetails()).write(this.engineConf, "");
+            this.config.remove("Plugin");
+        }
+        this.details = PluginDetails.read(this, this.engineConf, getDefaultDetails());
+        this.config.initializeOptions(Config.class);
+        PostgresSettings.addDefaults(this.engineConf);
+        new su.nightexpress.nightcore.user.data.UserDataSettings().load(this.engineConf);
+        this.engineConf.saveChanges();
+        this.config.saveChanges();
+    }
+
+    @Override
+    protected void setupRegistries() {
+        this.langRegistry = new SafeLangRegistry(this);
+        this.langRegistry.setup();
+        this.addRegistries();
+        this.langRegistry.loadLocale();
     }
 
     @Override
@@ -132,9 +159,12 @@ public class EconomyPlugin extends NightPlugin {
         if (this.commandManager != null) this.commandManager.shutdown();
         if (this.topManager != null) this.topManager.shutdown();
         if (this.migrationManager != null) this.migrationManager.shutdown();
-        if (this.userManager != null) this.userManager.shutdown();
-        if (this.dataHandler != null) this.dataHandler.shutdown();
-        if (this.currencyManager != null) this.currencyManager.shutdown();
+        try {
+            if (this.userManager != null) this.userManager.shutdown();
+        } finally {
+            try { if (this.dataHandler != null) this.dataHandler.shutdown(); }
+            finally { if (this.currencyManager != null) this.currencyManager.shutdown(); }
+        }
     }
 
     @Override
@@ -147,6 +177,12 @@ public class EconomyPlugin extends NightPlugin {
 
         this.getServer().getServicesManager().unregister(this.api);
         this.api = null;
+        if(this.dataHandler!=null && this.dataHandler.isPostgres()) {
+            java.sql.DriverManager.drivers().filter(driver -> driver.getClass().getClassLoader()==getClass().getClassLoader()).forEach(driver -> {
+                try { java.sql.DriverManager.deregisterDriver(driver); }
+                catch(java.sql.SQLException e) { this.error("Could not deregister owned JDBC driver"); }
+            });
+        }
     }
 
     @Override
@@ -160,7 +196,13 @@ public class EconomyPlugin extends NightPlugin {
         return this.api;
     }
 
+    public void runFailureForSender(CommandSender sender,Runnable runnable) {
+        if(su.nightexpress.excellenteconomy.data.postgres.AccountTransaction.feedback(() -> runForSender(sender,runnable))) return;
+        runForSender(sender,runnable);
+    }
+
     public void runForSender(CommandSender sender, Runnable runnable) {
+        if(su.nightexpress.excellenteconomy.data.postgres.AccountTransaction.defer(() -> runForSender(sender,runnable))) return;
         if (sender instanceof Player player) {
             if (Version.isFolia() ? Bukkit.isOwnedByCurrentRegion(player) : Bukkit.isPrimaryThread()) runnable.run();
             else this.runTask(player, runnable);

@@ -132,8 +132,7 @@ public class MigrationManager extends SimpleManager<EconomyPlugin> {
                 this.userManager.getDataAccessor().insert(user);
             }
 
-            user.setBalance(currency, amount);
-            user.markDirty();
+            this.currencyManager.set(su.nightexpress.excellenteconomy.api.currency.operation.OperationContext.custom("Migration").silent(),user,currency,amount);
         });
     }
 

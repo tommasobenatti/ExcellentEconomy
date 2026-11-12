@@ -20,6 +20,7 @@ import su.nightexpress.nightcore.commands.builder.ExecutableNodeBuilder;
 import su.nightexpress.nightcore.commands.command.NightCommand;
 import su.nightexpress.nightcore.commands.tree.ExecutableNode;
 import su.nightexpress.nightcore.config.FileConfig;
+import su.nightexpress.excellenteconomy.config.SafeFileConfig;
 import su.nightexpress.nightcore.core.config.CoreLang;
 import su.nightexpress.nightcore.manager.SimpleManager;
 import su.nightexpress.nightcore.util.LowerCase;
@@ -66,7 +67,7 @@ public class CommandManager extends SimpleManager<EconomyPlugin> {
     }
 
     private void loadCommandDefinitions() {
-        FileConfig config = FileConfig.load(this.plugin.getDataFolder().toPath().resolve(EconomyFiles.FILE_COMMANDS));
+        FileConfig config = SafeFileConfig.load(this.plugin.getDataFolder().toPath().resolve(EconomyFiles.FILE_COMMANDS));
 
         this.currencyRegisterMap.forEach((id, context) -> {
             String path = "Commands." + id;

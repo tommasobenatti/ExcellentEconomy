@@ -1,4 +1,5 @@
 package su.nightexpress.excellenteconomy.tops;
+import su.nightexpress.excellenteconomy.config.SafeFileConfig;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -69,7 +70,7 @@ public class TopManager extends AbstractManager<EconomyPlugin> {
         if (Config.isTopMenuEnabled()) {
             Path path = this.plugin.dataPath().resolve(EconomyFiles.DIR_MENU).resolve(TopFiles.FILE_LEADERBOARD);
 
-            this.topMenu = this.initMenu(new TopMenu(this.plugin, this), path);
+            this.topMenu = this.initMenu(new TopMenu(this.plugin, this), SafeFileConfig.load(path));
         }
         else if (Config.TOPS_USE_GUI.get()) {
             this.plugin.warn("Using text leaderboards on Folia: NightCore 2.16.7 inventory menus schedule clicks globally.");
@@ -98,6 +99,16 @@ public class TopManager extends AbstractManager<EconomyPlugin> {
     }
 
     public void updateBalances() {
+        if(this.plugin.getAPI().dataHandler().isPostgres()) {
+            Map<String,Map<String,TopEntry>> updated=new java.util.HashMap<>();
+            this.currencyRegistry.getCurrencies().forEach(currency -> {
+                Map<String,TopEntry> entries=new LinkedHashMap<>();
+                this.plugin.getAPI().dataHandler().leaderboard(currency).forEach(entry -> entries.put(LowerCase.INTERNAL.apply(entry.getName()),entry));
+                updated.put(currency.getId(),entries);
+            });
+            this.topEntries.putAll(updated);
+            return;
+        }
         this.topEntries.clear();
 
         Set<CoinsUser> users = this.userManager.getAll();

@@ -162,9 +162,8 @@ public class ExcellentEconomyProvider implements ExcellentEconomyAPI {
     @NonNull
     public CompletableFuture<OperationResult> depositAsync(@NonNull UUID playerId, @NonNull ExcellentCurrency currency,
                                                            double amount, @NonNull OperationContext context) {
-        return this.userManager().findByIdAsync(playerId)
-            .thenApply(opt -> opt.map(user -> this.currencyManager().give(context, user, currency, amount)).orElse(
-                OperationResult.FAILURE));
+        return this.userManager().findByIdAsync(playerId).thenCompose(opt ->
+            this.userManager().workAsync(() -> opt.map(user -> this.currencyManager().give(context,user,currency,amount)).orElse(OperationResult.FAILURE)));
     }
 
     @Override
@@ -217,9 +216,8 @@ public class ExcellentEconomyProvider implements ExcellentEconomyAPI {
     @NonNull
     public CompletableFuture<OperationResult> withdrawAsync(@NonNull UUID playerId, @NonNull ExcellentCurrency currency,
                                                             double amount, @NonNull OperationContext context) {
-        return this.userManager().findByIdAsync(playerId)
-            .thenApply(opt -> opt.map(user -> this.currencyManager().remove(context, user, currency, amount)).orElse(
-                OperationResult.FAILURE));
+        return this.userManager().findByIdAsync(playerId).thenCompose(opt ->
+            this.userManager().workAsync(() -> opt.map(user -> this.currencyManager().remove(context,user,currency,amount)).orElse(OperationResult.FAILURE)));
     }
 
     @Override
@@ -273,9 +271,8 @@ public class ExcellentEconomyProvider implements ExcellentEconomyAPI {
     public CompletableFuture<OperationResult> setBalanceAsync(@NonNull UUID playerId,
                                                               @NonNull ExcellentCurrency currency, double amount,
                                                               @NonNull OperationContext context) {
-        return this.userManager().findByIdAsync(playerId)
-            .thenApply(opt -> opt.map(user -> this.currencyManager().set(context, user, currency, amount)).orElse(
-                OperationResult.FAILURE));
+        return this.userManager().findByIdAsync(playerId).thenCompose(opt ->
+            this.userManager().workAsync(() -> opt.map(user -> this.currencyManager().set(context,user,currency,amount)).orElse(OperationResult.FAILURE)));
     }
 
     @Override
@@ -305,25 +302,25 @@ public class ExcellentEconomyProvider implements ExcellentEconomyAPI {
     @Override
     @NonNull
     public CoinsUser getCachedUserData(@NonNull Player player) {
-        return this.userManager().getOrFetch(player);
+        return this.userManager().requireLoaded(player);
     }
 
     @Override
     @NonNull
     public Optional<CoinsUser> getCachedUserData(@NonNull UUID playerId) {
-        return this.userManager().getRepository().getById(playerId);
+        return this.userManager().cachedId(playerId);
     }
 
     @Override
     @NonNull
     public Optional<CoinsUser> getCachedUserData(@NonNull String playerName) {
-        return this.userManager().getRepository().getByName(playerName);
+        return this.userManager().cachedName(playerName);
     }
 
     @Override
     @NonNull
     public CompletableFuture<Optional<CoinsUser>> loadUserDataByName(@NonNull String name) {
-        return this.userManager().loadByNameAsync(name);
+        return this.userManager().findByNameAsync(name);
     }
 
     @Override

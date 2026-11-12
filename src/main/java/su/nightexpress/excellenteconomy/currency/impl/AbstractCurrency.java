@@ -8,6 +8,7 @@ import org.jspecify.annotations.NonNull;
 import su.nightexpress.excellenteconomy.EconomyPlaceholders;
 import su.nightexpress.excellenteconomy.api.currency.ExcellentCurrency;
 import su.nightexpress.excellenteconomy.config.Config;
+import su.nightexpress.excellenteconomy.config.SafeFileConfig;
 import su.nightexpress.excellenteconomy.config.Perms;
 import su.nightexpress.excellenteconomy.currency.tax.TransferTax;
 import su.nightexpress.nightcore.config.ConfigValue;
@@ -98,12 +99,15 @@ public abstract class AbstractCurrency implements ExcellentCurrency, ConfigBacke
         this.updateMessagePrefix();
     }
 
+    @Override
+    public FileConfig loadConfig() { return SafeFileConfig.load(this.path); }
+
     public void load() throws IllegalStateException {
         this.loadConfig().edit(this::load);
     }
 
     public void write() {
-        this.loadConfig().edit(this::write);
+        SafeFileConfig.load(this.path,false).edit(this::write);
     }
 
     private void load(@NonNull FileConfig config) throws IllegalStateException {
@@ -212,7 +216,7 @@ public abstract class AbstractCurrency implements ExcellentCurrency, ConfigBacke
             "Controls whether this currency can be exchanged for other ones."
         ).read(config));
 
-        if (config.getSection("Exchange.Rates").isEmpty()) {
+        if (!config.contains("Exchange.Rates")) {
             config.set("Exchange.Rates.mystery_coins", 5);
             config.set("Exchange.Rates.magic_coins", 10);
         }
