@@ -88,6 +88,27 @@ class PostgresAccountsTest {
         assertEquals(10,store.loadById(first.getId()).orElseThrow().getBalance(money));
     }
 
+    @Test void twoBackendsCannotSpendTheSameMoneyAndMetadataNeverRestoresOldBalances() throws Exception {
+        var money=TestServer.currency("money");
+        var user=TestServer.user("shared",money,100);
+        store.insert(user);
+        var stale=store.loadById(user.getId()).orElseThrow();
+        FileConfig settings=FileConfig.load(directory.resolve("engine.yml"));
+        // Reuse the same settings from the owning store through an explicit second connection pool.
+        var second=new PostgresAccounts(store.settings());
+        try(second; var threads=java.util.concurrent.Executors.newFixedThreadPool(8)) {
+            var work=new ArrayList<java.util.concurrent.Callable<Boolean>>();
+            for(int n=0;n<20;n++) { var backend=n%2==0?store:second;
+                work.add(()->backend.atomic(List.of(user.getId()),rows->su.nightexpress.excellenteconomy.user.BalanceTransactions.withdraw(rows.get(user.getId()),money,10),Boolean::booleanValue));
+            }
+            int successes=0; for(var result:threads.invokeAll(work)) if(result.get()) successes++;
+            assertEquals(10,successes);
+            assertEquals(0,store.loadById(user.getId()).orElseThrow().getBalance(money));
+            store.update(stale);
+            assertEquals(0,store.loadById(user.getId()).orElseThrow().getBalance(money));
+        }
+    }
+
     private su.nightexpress.excellenteconomy.api.currency.ExcellentCurrency currency(String column, double start) {
         var c=TestServer.currency(column); when(c.getColumnName()).thenReturn(column); when(c.getStartValue()).thenReturn(start); return c;
     }
