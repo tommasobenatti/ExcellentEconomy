@@ -158,6 +158,21 @@ class PostgresAccountsTest {
         assertEquals(100,user.getBalance(money));
     }
 
+    @Test void indexedLookupsRemainBoundedWithThirtyThousandAccounts() throws Exception {
+        try(Connection c=connection(); Statement statement=c.createStatement()) {
+            statement.execute("INSERT INTO \""+prefix+"_users\" (uuid,name,last_seen) SELECT gen_random_uuid(),'bench_'||n,0 FROM generate_series(1,30000) n");
+            statement.execute("ANALYZE \""+prefix+"_users\"");
+            try(ResultSet rs=statement.executeQuery("EXPLAIN (ANALYZE,FORMAT JSON) SELECT uuid FROM \""+prefix+"_users\" WHERE lower(name)=lower('BENCH_15000')")) {
+                assertTrue(rs.next()); assertTrue(rs.getString(1).contains(prefix+"_name_idx"));
+            }
+        }
+        for(int n=0;n<30;n++) assertTrue(store.loadByName("BENCH_15000").isPresent());
+        long[] samples=new long[100];
+        for(int n=0;n<samples.length;n++) { long start=System.nanoTime(); assertTrue(store.loadByName("BENCH_15000").isPresent()); samples[n]=System.nanoTime()-start; }
+        Arrays.sort(samples);
+        System.out.printf(Locale.ROOT,"PostgreSQL 30000-account indexed lookup: p50=%.3f ms, p95=%.3f ms; pool max=%d%n",samples[50]/1e6,samples[95]/1e6,store.maximumPoolSize());
+    }
+
     private su.nightexpress.excellenteconomy.api.currency.ExcellentCurrency currency(String column, double start) {
         var c=TestServer.currency(column); when(c.getColumnName()).thenReturn(column); when(c.getStartValue()).thenReturn(start); return c;
     }

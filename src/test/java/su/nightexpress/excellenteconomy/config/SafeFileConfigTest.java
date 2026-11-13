@@ -49,4 +49,18 @@ class SafeFileConfigTest {
         assertThrows(IllegalStateException.class, config::saveChanges);
         assertEquals("Existing: edited-during-reload\n", Files.readString(path));
     }
+    @Test void explicitCollectionEditsAreNotMistakenForDefaultsAndBadReloadDoesNotDisable() throws Exception {
+        TestServer.initialize();
+        Path file=directory.resolve("config.yml");
+        Files.writeString(file,"Exchange:\n  Rates: {}\n");
+        var edit=SafeFileConfig.load(file,false); edit.set("Exchange.Rates.money",2); edit.saveChanges();
+        assertEquals(2,SafeFileConfig.load(file).getInt("Exchange.Rates.money"));
+        Files.writeString(file,"invalid: [");
+        var plugin=org.mockito.Mockito.mock(su.nightexpress.excellenteconomy.EconomyPlugin.class,org.mockito.Mockito.CALLS_REAL_METHODS);
+        org.mockito.Mockito.when(plugin.getDataFolder()).thenReturn(directory.toFile());
+        assertThrows(IllegalArgumentException.class,plugin::reload);
+        org.mockito.Mockito.verify(plugin,org.mockito.Mockito.never()).disable();
+        assertEquals("invalid: [",Files.readString(file));
+    }
+
 }

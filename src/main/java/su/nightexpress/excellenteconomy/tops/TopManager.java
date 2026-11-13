@@ -146,7 +146,7 @@ public class TopManager extends AbstractManager<EconomyPlugin> {
     }
 
     public void hideOrShowInTops(@NonNull Player player, boolean state) {
-        this.hideOrShowInTops(this.userManager.getOrFetch(player), state);
+        this.userManager.findByIdAsync(player.getUniqueId()).thenAccept(found -> found.ifPresent(user -> this.hideOrShowInTops(user,state)));
     }
 
     public void hideOrShowInTops(@NonNull CoinsUser user, boolean state) {

@@ -66,6 +66,22 @@ public class EconomyPlugin extends NightPlugin {
     }
 
     @Override
+    public void reload() {
+        // Validate before disabling the running economy; an invalid YAML must leave it operational.
+        for(String name:java.util.List.of("engine.yml","config.yml","commands.yml")) {
+            var path=dataPath().resolve(name); if(java.nio.file.Files.exists(path)) SafeFileConfig.load(path);
+        }
+        for(String folder:java.util.List.of("currencies","lang","menu")) {
+            var dir=dataPath().resolve(folder); if(!java.nio.file.Files.isDirectory(dir)) continue;
+            try(var files=java.nio.file.Files.walk(dir)) {
+                files.filter(path -> java.nio.file.Files.isRegularFile(path) && path.toString().endsWith(".yml"))
+                    .forEach(SafeFileConfig::load);
+            } catch(java.io.IOException e) { throw new java.io.UncheckedIOException(e); }
+        }
+        super.reload();
+    }
+
+    @Override
     protected void setupConfig() {
         this.engineConf = SafeFileConfig.load(dataPath().resolve(ENGINE_FILE));
         this.config = SafeFileConfig.load(dataPath().resolve(CONFIG_FILE));
