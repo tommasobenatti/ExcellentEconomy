@@ -55,6 +55,8 @@ tasks {
 
     jacocoTestReport {
         dependsOn(test)
+        mustRunAfter("postgresTest")
+        executionData(fileTree(layout.buildDirectory.dir("jacoco")) { include("*.exec") })
         reports {
             xml.required = true
         }

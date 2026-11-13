@@ -82,6 +82,8 @@ class PostgresAccountsTest {
     @Test void rejectsUnsafeIdentifiersAndRollsBackFailedBatches() throws Exception {
         assertThrows(IllegalArgumentException.class, () -> store.registerCurrency(currency("bad\"; DROP TABLE x",0)));
         assertThrows(IllegalArgumentException.class, () -> store.registerCurrency(currency("balance_version",0)));
+        assertThrows(IllegalArgumentException.class, () -> store.registerCurrency(currency("invalid_start",-1)));
+        assertThrows(IllegalArgumentException.class, () -> store.resetBalances(List.of(currency("missing",0))));
         var money=TestServer.currency("money");
         var first=TestServer.user("First",money,10); var missing=TestServer.user("Missing",money,0);
         store.insert(first); first.getBalance().set("money",20);
@@ -171,6 +173,40 @@ class PostgresAccountsTest {
         for(int n=0;n<samples.length;n++) { long start=System.nanoTime(); assertTrue(store.loadByName("BENCH_15000").isPresent()); samples[n]=System.nanoTime()-start; }
         Arrays.sort(samples);
         System.out.printf(Locale.ROOT,"PostgreSQL 30000-account indexed lookup: p50=%.3f ms, p95=%.3f ms; pool max=%d%n",samples[50]/1e6,samples[95]/1e6,store.maximumPoolSize());
+    }
+
+    @Test void atomicWritesHaveBoundedLocalLatency() {
+        var money=TestServer.currency("money"); var user=TestServer.user("latency",money,100); store.insert(user);
+        long[] samples=new long[100];
+        for(int n=0;n<samples.length;n++) {
+            long start=System.nanoTime();
+            boolean ok=store.atomic(List.of(user.getId()),rows->su.nightexpress.excellenteconomy.user.BalanceTransactions.deposit(rows.get(user.getId()),money,1),Boolean::booleanValue);
+            assertTrue(ok); samples[n]=System.nanoTime()-start;
+        }
+        assertEquals(200,store.loadById(user.getId()).orElseThrow().getBalance(money));
+        Arrays.sort(samples);
+        System.out.printf(Locale.ROOT,"PostgreSQL durable atomic write: p50=%.3f ms, p95=%.3f ms%n",samples[50]/1e6,samples[95]/1e6);
+    }
+
+    @Test void profilesPreferencesSynchronizationAndRankingUseNativeQueries() throws Exception {
+        var money=currency("money",1000); var a=TestServer.user("visible",money,50); var b=TestServer.user("hidden",money,200);
+        b.setHiddenFromTops(true); store.insert(List.of(a,b));
+        assertTrue(store.isExists(a.getId())); assertTrue(store.isExists("VISIBLE"));
+        assertEquals(2,store.loadProfiles().size()); assertEquals(2,store.loadAll().size());
+        a.getSettings(money).setPaymentsEnabled(false); a.setLastSeen(System.currentTimeMillis()+10000); a.setName("renamed");
+        store.update(a); store.tinyUpdate(a);
+        assertFalse(store.loadByName("RENAMED").orElseThrow().getSettings(money).isPaymentsEnabled());
+        var fetched=new ArrayList<CoinsUser>(); store.addSynchronization(fetched::add);
+        store.synchronize(List.of(a.getId(),b.getId())); assertEquals(2,fetched.size());
+        store.synchronize(List.of());
+        try(var profiles=mockStatic(su.nightexpress.nightcore.util.profile.PlayerProfiles.class)) {
+            profiles.when(()->su.nightexpress.nightcore.util.profile.PlayerProfiles.createProfile(any(UUID.class),anyString()))
+                .thenReturn(mock(su.nightexpress.nightcore.util.profile.CachedProfile.class));
+            var rank=store.leaderboard(money); assertEquals(1,rank.size()); assertEquals(a.getId(),rank.getFirst().getPlayerId());
+        }
+        store.purgeBefore(System.currentTimeMillis()); assertTrue(store.loadById(b.getId()).isEmpty());
+        assertTrue(store.loadById(a.getId()).isPresent()); store.deleteByName("RENAMED"); assertTrue(store.loadAll().isEmpty());
+        store.update(List.of()); store.insert(List.of()); store.tinyUpdate(List.of()); store.resetBalances(List.of());
     }
 
     private su.nightexpress.excellenteconomy.api.currency.ExcellentCurrency currency(String column, double start) {

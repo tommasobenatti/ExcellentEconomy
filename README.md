@@ -4,9 +4,12 @@
 
 A focused fork of [NightExpress's ExcellentEconomy](https://github.com/nulli0n/ExcellentEconomy), based on **2.8.0**, with native **Vault Unlocked**, per-currency command permissions, progressive transfer taxes, and **Folia-aware scheduling**. The plugin name, existing currency files, SQLite/MySQL storage, and public ExcellentEconomy API are retained.
 
-Current fork version: **2.8.1-mcexp.1**.
+Current fork version: **2.9.0-mcexp.1**.
 
 ## What changed
+
+- **PostgreSQL:** native shared balances, row-locked atomic payments across backends, versioned cache refresh, indexed lookups, bounded connection/I/O pools, and failure-aware metadata saves. [Configuration, migration and runtime limits](docs/postgresql.md), [verification](docs/postgresql-verification.md).
+- **Safe configuration upgrades:** validated startup/reload updates, private backups, atomic file replacement, administrator collection/comment preservation, and rejection of concurrent edits.
 
 - **Native Vault Unlocked API 2.20:** UUID accounts, all registered currencies, balance queries, deposits, withdrawals, balance setting, transaction previews, and atomic account-to-account transfers. Legacy Vault remains available separately.
 - **Safe payments:** balance checks and both sides of a transfer share a transaction lock. Repeated `/pay` calls cannot spend the same balance several times. Cancelled balance events roll back both sides, including currency exchanges.
@@ -48,7 +51,7 @@ Compilation and mocked API tests do **not** certify every server build or third-
 4. Keep existing currency IDs and database column names. New settings default to the existing command behavior and **taxes disabled**.
 5. Configure permissions and taxes, then restart to apply command/primary-currency changes consistently.
 
-Existing storage is retained; no new database schema is introduced. The legacy zero balance floor remains mandatory. The separate [CoinsEngine upgrade guide](https://nightexpressdev.com/excellenteconomy/upgrade-guide/) applies to switching from CoinsEngine.
+Existing MySQL/SQLite storage is retained. PostgreSQL is a separate backend with its native schema; selecting it does not migrate balances. The legacy zero balance floor remains mandatory. The separate [CoinsEngine upgrade guide](https://nightexpressdev.com/excellenteconomy/upgrade-guide/) applies to switching from CoinsEngine.
 
 ### Keep an existing configuration and database
 
@@ -223,7 +226,7 @@ Statuses checked on **2026-10-13**; these changes are local to this fork and do 
 ./gradlew clean test jacocoTestReport build
 ```
 
-The JAR is written to `build/libs/ExcellentEconomy-2.8.1-mcexp.1.jar`. NightCore and Vault APIs remain external dependencies.
+The JAR is written to `build/libs/ExcellentEconomy-2.9.0-mcexp.1.jar`. NightCore and Vault APIs remain external dependencies.
 
 To repeat the API compatibility checks:
 

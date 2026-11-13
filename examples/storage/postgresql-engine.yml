@@ -1,0 +1,18 @@
+# Merge into the existing engine.yml. Supply real credentials before selecting POSTGRESQL.
+# Selecting a backend does not import existing MySQL/SQLite balances.
+Database:
+  Type: POSTGRESQL
+  Table_Prefix: coinsengine
+  PostgreSQL:
+    Host: localhost
+    Port: 5432
+    Database: minecraft
+    Username: minecraft
+    Password: ''
+    SSL_Mode: verify-full
+    Balance_Refresh_Interval: 1
+    Pool:
+      Maximum_Size: 4
+      Connection_Timeout_Ms: 3000
+    Query_Timeout_Seconds: 5
+    Batch_Size: 64
